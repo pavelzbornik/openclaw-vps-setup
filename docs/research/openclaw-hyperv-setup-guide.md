@@ -1,4 +1,5 @@
 # Complete OpenClaw Automation Setup Guide
+
 ## Hyper-V VM + Ansible Provisioning + 1Password + Home Assistant
 
 This guide provides a production-ready, automated deployment of OpenClaw on Windows 11 using Hyper-V, with configuration management via Git, secrets via 1Password, and Home Assistant integration.
@@ -240,7 +241,7 @@ Create `playbooks/provision-openclaw.yml`:
   become: yes
   vars_files:
     - ../vars/secrets.yml  # 1Password injected secrets
-    
+
   tasks:
     - name: Update apt cache
       apt:
@@ -400,7 +401,7 @@ Create `playbooks/provision-openclaw.yml`:
                 - OPENAI_API_KEY=${OPENAI_API_KEY}
               mem_limit: 2g
               cpus: 1.0
-              
+
           volumes:
             openclaw-data:
 
@@ -412,7 +413,7 @@ Create `playbooks/provision-openclaw.yml`:
           Description=OpenClaw Gateway
           After=docker.service tailscaled.service
           Requires=docker.service
-          
+
           [Service]
           Type=oneshot
           RemainAfterExit=yes
@@ -421,7 +422,7 @@ Create `playbooks/provision-openclaw.yml`:
           ExecStop=/usr/bin/docker compose down
           User=openclaw
           Group=openclaw
-          
+
           [Install]
           WantedBy=multi-user.target
 
@@ -486,17 +487,20 @@ Store the token in 1Password under a new item:
 Create these items in your "OpenClaw-Secrets" vault:
 
 **Item: "OpenClaw API Keys"**
+
 - `ANTHROPIC_API_KEY`: sk-ant-xxx
 - `OPENAI_API_KEY`: sk-xxx
 - `TELEGRAM_BOT_TOKEN`: xxx
 - `DISCORD_BOT_TOKEN`: xxx
 
 **Item: "OpenClaw Git Config"**
-- `OPENCLAW_CONFIG_REPO`: https://github.com/yourusername/openclaw-config.git
+
+- `OPENCLAW_CONFIG_REPO`: <https://github.com/yourusername/openclaw-config.git>
 - `GITHUB_TOKEN`: ghp_xxx (for private repo)
 
 **Item: "Home Assistant"**
-- `HA_URL`: http://homeassistant.local:8123
+
+- `HA_URL`: <http://homeassistant.local:8123>
 - `HA_TOKEN`: eyJxxx (Long-Lived Access Token)
 
 ### Step 4: Create 1Password-Ansible Integration Script
@@ -629,7 +633,7 @@ ha_api() {
     local endpoint="$1"
     local method="${2:-GET}"
     local data="$3"
-    
+
     curl -X "$method" \
         -H "Authorization: Bearer $HA_TOKEN" \
         -H "Content-Type: application/json" \
@@ -667,10 +671,12 @@ ha_set_temperature() {
 ## Available Commands
 
 When user mentions home control, check these patterns:
+
 - "turn on/off [device]" → map to entity_id
 - "set [climate device] to [temp]" → climate control
 - "is [device] on?" → check state
 - "dim [light] to [percent]" → light brightness
+
 ```
 
 ### Step 4: Create .gitignore
@@ -757,6 +763,7 @@ Update `playbooks/provision-openclaw.yml` to add deployment task:
 ### Daily Operation
 
 1. **Update configuration:**
+
 ```bash
 # On your dev machine
 cd openclaw-config
@@ -766,6 +773,7 @@ git push
 ```
 
 2. **Deploy to VM:**
+
 ```bash
 # From WSL2
 cd ~/openclaw-ansible
@@ -773,6 +781,7 @@ cd ~/openclaw-ansible
 ```
 
 3. **Test via WhatsApp:**
+
 ```
 You: "Turn on movie mode"
 OpenClaw: *Activating scene.movie_mode in Home Assistant*
@@ -781,12 +790,14 @@ OpenClaw: *Activating scene.movie_mode in Home Assistant*
 ### Backup and Restore
 
 **Create snapshot:**
+
 ```powershell
 # On Windows host
 Checkpoint-VM -Name "OpenClaw-VM" -SnapshotName "pre-update-$(Get-Date -Format 'yyyyMMdd')"
 ```
 
 **Restore from snapshot:**
+
 ```powershell
 Restore-VMCheckpoint -VMName "OpenClaw-VM" -Name "pre-update-20260201"
 ```
@@ -810,6 +821,7 @@ Restore-VMCheckpoint -VMName "OpenClaw-VM" -Name "pre-update-20260201"
 ## Useful Commands
 
 **Ansible:**
+
 ```bash
 # Test connectivity
 ansible openclaw_vms -i inventory/hosts.yml -m ping
@@ -822,6 +834,7 @@ ansible-playbook playbooks/provision-openclaw.yml --tags docker
 ```
 
 **Hyper-V:**
+
 ```powershell
 # List VMs
 Get-VM
@@ -837,6 +850,7 @@ Get-VMSnapshot -VMName "OpenClaw-VM"
 ```
 
 **1Password CLI:**
+
 ```bash
 # Test secret access
 op item get "OpenClaw API Keys" --vault "OpenClaw-Secrets"
@@ -849,6 +863,7 @@ op read "op://OpenClaw-Secrets/Home Assistant/HA_TOKEN"
 ```
 
 **OpenClaw:**
+
 ```bash
 # SSH into VM
 ssh openclaw@192.168.100.10
@@ -868,6 +883,7 @@ docker exec openclaw openclaw doctor
 ## Troubleshooting
 
 **VM can't reach internet:**
+
 ```powershell
 # Check NAT
 Get-NetNat
@@ -875,6 +891,7 @@ Get-NetNat
 ```
 
 **Ansible can't connect:**
+
 ```bash
 # Test direct SSH
 ssh -i ~/.ssh/openclaw_vm openclaw@192.168.100.10
@@ -884,6 +901,7 @@ ansible-inventory -i inventory/hosts.yml --list
 ```
 
 **1Password secrets not injecting:**
+
 ```bash
 # Verify service account
 export OP_SERVICE_ACCOUNT_TOKEN="ops_xxx"
@@ -894,6 +912,7 @@ op read "op://OpenClaw-Secrets/OpenClaw API Keys/ANTHROPIC_API_KEY"
 ```
 
 **Home Assistant not responding:**
+
 ```bash
 # Test from VM
 curl -H "Authorization: Bearer $HA_TOKEN" \

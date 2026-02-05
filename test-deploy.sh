@@ -120,7 +120,7 @@ fi
 if [ ! -f "$INVENTORY" ]; then
     print_error "Inventory file not found: $INVENTORY"
     print_info "Creating test inventory at $INVENTORY..."
-    
+
     # Create the test inventory file
     mkdir -p "$(dirname "$INVENTORY")"
     cat > "$INVENTORY" << 'INVENTORY_EOF'
@@ -132,7 +132,7 @@ ubuntu-target ansible_connection=docker ansible_host=ubuntu-target
 ansible_user=root
 ansible_python_interpreter=/usr/bin/python3
 INVENTORY_EOF
-    
+
     if [ -f "$INVENTORY" ]; then
         print_info "✓ Test inventory created at $INVENTORY"
     else
@@ -213,7 +213,7 @@ if eval "$CMD"; then
     print_info "====================================="
     print_info "✓ Test deployment completed successfully!"
     print_info "====================================="
-    
+
     if [ "$DRY_RUN" = true ]; then
         print_warn "This was a dry-run. No changes were made."
         print_warn "Run without --check to apply changes."

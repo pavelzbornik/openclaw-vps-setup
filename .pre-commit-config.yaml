@@ -1,0 +1,93 @@
+# Pre-commit hooks for openclaw repository
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # Git checks
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
+
+      # File formatting
+      - id: trailing-whitespace
+        args: ['--markdown-linebreak-ext=md']
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+      # File validation
+      - id: check-yaml
+        args: ['--unsafe']  # Allow custom YAML tags used by Ansible
+      - id: check-json
+        exclude: '\.devcontainer/.*\.json$'  # Exclude devcontainer files (JSONC format)
+      - id: check-toml
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+
+      # Security
+      - id: detect-private-key
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        args: ['-x']  # Follow source statements
+
+  # Terraform (disabled in Windows dev environment due to CRLF issues)
+  # Run terraform fmt/validate manually or in CI
+  # - repo: https://github.com/antonbabenko/pre-commit-terraform
+  #   rev: v1.88.4
+  #   hooks:
+  #     - id: terraform_fmt
+  #     - id: terraform_validate
+  #     - id: terraform_docs
+  #       args:
+  #         - --hook-config=--path-to-file=README.md
+  #         - --hook-config=--add-to-existing-file=true
+  #         - --hook-config=--create-file-if-not-exist=true
+  #     - id: terraform_tflint
+  #       args:
+  #         - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
+  #     - id: terraform_trivy
+  #       args:
+  #         - --args=--severity=HIGH,CRITICAL
+
+  # Ansible linting (disabled due to dependency conflicts - run manually)
+  # - repo: https://github.com/ansible/ansible-lint
+  #   rev: v24.2.0
+  #   hooks:
+  #     - id: ansible-lint
+  #       files: \.(yaml|yml)$
+  #       entry: ansible-lint
+  #       args: ['--profile=production']
+
+  # YAML linting (for non-Ansible YAML files)
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args:
+          - '-d'
+          - '{extends: default, rules: {line-length: {max: 160}, document-start: disable, truthy: {check-keys: false}}}'
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.39.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix', '--disable', 'MD013', 'MD040', 'MD041', 'MD036']
+        exclude: 'docs/research/.*\.md$'  # Exclude research documents
+
+  # Security scanning
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: '^terraform/discord/.*|package.lock.json'

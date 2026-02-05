@@ -6,7 +6,9 @@
 
 - name: Vendor base | Assert firewall implies docker
   ansible.builtin.fail:
-    msg: "vendor_firewall_enabled=true requires vendor_docker_enabled=true (upstream firewall config writes Docker/UFW integration and restarts docker)."
+    msg: >
+      vendor_firewall_enabled=true requires vendor_docker_enabled=true
+      (upstream firewall config writes Docker/UFW integration and restarts docker).
   when:
     - vendor_firewall_enabled | default(false)
     - not (vendor_docker_enabled | default(false))

@@ -18,6 +18,18 @@ print_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
+# Install and configure pre-commit
+print_info "Installing pre-commit..."
+if ! command -v pre-commit &> /dev/null; then
+    pipx install pre-commit
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+print_info "Setting up pre-commit hooks..."
+cd /workspaces/openclaw || exit 1
+pre-commit install --install-hooks
+pre-commit autoupdate || print_warn "Could not update pre-commit hooks (network issue?)"
+
 # Navigate to ansible directory
 cd /workspaces/openclaw/ansible || exit 1
 
@@ -84,26 +96,26 @@ if [ -z "$TARGET_CONTAINER" ]; then
     print_warn "Could not find ubuntu-target container. SSH setup will be attempted later."
 else
     print_info "Found target container: $TARGET_CONTAINER"
-    
+
     # Ensure SSH directory exists and generate key if needed
     if [ ! -f ~/.ssh/id_ed25519 ]; then
         print_info "Generating SSH key..."
         mkdir -p ~/.ssh
         ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C "ansible-control"
     fi
-    
+
     # Get the SSH public key
     SSH_PUB_KEY=$(cat ~/.ssh/id_ed25519.pub)
-    
+
     # Add public key to root's authorized_keys on target
     print_info "Adding public key to $TARGET_CONTAINER..."
-    $DOCKER_SUDO docker exec $TARGET_CONTAINER bash -c "
+    $DOCKER_SUDO docker exec "$TARGET_CONTAINER" bash -c "
         mkdir -p /root/.ssh
         chmod 700 /root/.ssh
         echo '$SSH_PUB_KEY' >> /root/.ssh/authorized_keys
         chmod 600 /root/.ssh/authorized_keys
     " 2>/dev/null || print_warn "Could not add SSH key to target container yet."
-    
+
     # Test SSH connection
     print_info "Testing SSH connection to target container..."
     if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_ed25519 root@ubuntu-target "echo 'SSH connection successful'" &>/dev/null; then
@@ -139,6 +151,11 @@ echo "  • SSH Port:   published on a random host port by default"
 echo "  • Gateway:    published on a random host port by default"
 echo "  • Find ports: docker compose -f .devcontainer/docker-compose.yml port ubuntu-target 22"
 echo "              docker compose -f .devcontainer/docker-compose.yml port ubuntu-target 18789"
+echo ""
+echo "Pre-commit:"
+echo "  • Hooks installed:    pre-commit will run on every git commit"
+echo "  • Run manually:       pre-commit run --all-files"
+echo "  • Cache location:     ~/.cache/pre-commit (persisted via volume)"
 echo ""
 echo "Next steps:"
 echo "  1. Test connectivity: ansible all -i inventory/test-container.yml -m ping"

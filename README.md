@@ -65,6 +65,7 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 | [ansible/QUICKSTART.md](ansible/QUICKSTART.md) | Step-by-step deployment guide |
 | [ansible/TROUBLESHOOTING.md](ansible/TROUBLESHOOTING.md) | Problem solving guide |
 | [ansible/IMPLEMENTATION_NOTES.md](ansible/IMPLEMENTATION_NOTES.md) | Critical configuration notes |
+| [docs/PRE_COMMIT_SETUP.md](docs/PRE_COMMIT_SETUP.md) | Pre-commit hooks setup and usage |
 | [docs/research/openclaw-hyperv-setup-guide.md](docs/research/openclaw-hyperv-setup-guide.md) | Original manual setup guide |
 
 ## 🔧 Common Commands

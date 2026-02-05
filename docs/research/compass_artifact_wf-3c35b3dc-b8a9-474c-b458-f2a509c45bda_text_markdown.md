@@ -9,6 +9,7 @@ OpenClaw's heartbeat functionality—periodic "are you still there?" checks ever
 Heartbeats in OpenClaw serve a specific purpose: the agent wakes periodically, reviews recent context via a `HEARTBEAT.md` checklist file, and decides whether anything needs attention. If nothing requires action, it returns a simple `HEARTBEAT_OK` acknowledgment. The model requirements here are minimal—basic instruction following, simple file reading, and binary decision-making.
 
 For heartbeat tasks, your model needs to:
+
 - Parse a small markdown checklist
 - Compare current state against simple conditions
 - Return a standardized acknowledgment or alert

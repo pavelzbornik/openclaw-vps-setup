@@ -5,7 +5,7 @@
 - name: Provision OpenClaw VM
   hosts: openclaw_vms
   become: yes
-  
+
   pre_tasks:
     - name: Display target host information
       debug:
@@ -97,26 +97,26 @@
           ========================================
           OpenClaw Provisioning Complete!
           ========================================
-          
+
           Next steps:
-          
+
           1. Configure secrets (if not already done):
              - Set environment variables in {{ openclaw_install_dir }}/.env
              - Or use 1Password CLI to inject secrets
-          
+
           2. Configure Tailscale (if not already done):
              SSH to VM and run: sudo tailscale up
-          
+
           3. Start OpenClaw service:
              sudo systemctl start openclaw
-          
+
           4. Check logs:
              sudo journalctl -u openclaw -f
-          
+
           5. Access OpenClaw Gateway:
              - Via Tailscale: http://<tailscale-ip>:{{ openclaw_port }}
              - Locally: http://localhost:{{ openclaw_port }}
-          
+
           ========================================
       tags:
         - always

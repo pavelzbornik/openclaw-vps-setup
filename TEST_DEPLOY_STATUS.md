@@ -28,6 +28,7 @@
 ## 🟡 Current Status - SSH Key Setup Fixed! ✅
 
 The SSH authentication issue has been resolved. The `test-deploy.sh --check` now successfully:
+
 - Passes connectivity testing ✅
 - Gathers system facts ✅
 - Executes deployment tasks in check mode ✅
@@ -36,6 +37,7 @@ The SSH authentication issue has been resolved. The `test-deploy.sh --check` now
 ### Current Blocking Issue
 
 The ubuntu-target Docker container image is missing the `git` package that's required by the playbook:
+
 - Error: `No package matching 'git' is available`
 - This occurs during the `common : Install base packages` task
 - The container's apt cache needs to be initialized with universe/multiverse repos or the Dockerfile needs updating
@@ -45,12 +47,14 @@ The ubuntu-target Docker container image is missing the `git` package that's req
 The original error was: `root@ubuntu-target: Permission denied (publickey)`
 
 **Solution Applied:**
+
 1. Copied the devcontainer's SSH public key (`~/.ssh/id_ed25519.pub`) to the ubuntu-target container
 2. Added key to `/root/.ssh/authorized_keys` in the container
 3. Verified permissions (700 for directory, 600 for authorized_keys file)
 4. SSH authentication now works successfully
 
 **Command used to fix:**
+
 ```bash
 CONTAINER_ID=$(sudo docker ps --filter "name=ubuntu-target" --format "{{.ID}}" | head -1)
 SSH_KEY=$(cat ~/.ssh/id_ed25519.pub)

@@ -191,7 +191,7 @@ if eval "$CMD"; then
     print_info "====================================="
     print_info "✓ Deployment completed successfully!"
     print_info "====================================="
-    
+
     if [ "$DRY_RUN" = true ]; then
         print_warn "This was a dry-run. No changes were made."
         print_warn "Run without --check to apply changes."

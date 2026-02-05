@@ -1,7 +1,7 @@
 # Upstream Ansible Reuse (openclaw/openclaw-ansible)
 
 This repo originally implemented a full OpenClaw VM provisioning playbook under `ansible/`.
-There is also an upstream installer playbook at https://github.com/openclaw/openclaw-ansible.
+There is also an upstream installer playbook at <https://github.com/openclaw/openclaw-ansible>.
 
 To avoid reinventing the wheel (and to make it easy to track upstream improvements), this workspace vendors the upstream repo as a git submodule:
 

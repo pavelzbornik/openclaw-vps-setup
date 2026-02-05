@@ -89,6 +89,7 @@
 
   // Mount the Docker socket for Docker-in-Docker
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=openclaw-precommit-cache,target=/home/vscode/.cache/pre-commit,type=volume"
   ]
 }

@@ -44,7 +44,7 @@ If OpenClaw is not published to npm, you have options:
 - name: Install dependencies
   npm:
     path: "/opt/openclaw"
-    
+
 - name: Build OpenClaw
   command: npm run build
   args:
@@ -101,7 +101,7 @@ ansible/
 
 #### 2. Vendor Base (Upstream)
 
-This workspace vendors https://github.com/openclaw/openclaw-ansible and uses it as the baseline via the `openclaw_vendor_base` role:
+This workspace vendors <https://github.com/openclaw/openclaw-ansible> and uses it as the baseline via the `openclaw_vendor_base` role:
 
 - Node.js + pnpm install (upstream)
 - Tailscale install (upstream)

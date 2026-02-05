@@ -114,6 +114,7 @@ API keys (Anthropic, OpenAI) must be stored on the VPS—if compromised, they ca
 Architecture: `OpenClaw (VPS) <--Tailscale--> Home Server --> Smart Home / NAS / Local Services`
 
 Limit SSH access to Tailscale IPs only:
+
 ```bash
 ufw allow from 100.64.0.0/10 to any port 22
 ufw deny 22
@@ -191,6 +192,7 @@ For a Windows 11 home server where you want **maximum security while keeping oth
 **Layer 2 - Docker container**: Run OpenClaw inside Docker within the VM with all hardening flags (`--read-only`, `--cap-drop ALL`, non-root user, resource limits). This adds defense-in-depth.
 
 **Layer 3 - Application hardening**: Configure OpenClaw's built-in security:
+
 ```json
 {
   "gateway": {

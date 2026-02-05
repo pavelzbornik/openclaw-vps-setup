@@ -113,7 +113,10 @@
 
 - name: Display OpenClaw npm installation status
   debug:
-    msg: "OpenClaw npm installation: {{ 'succeeded' if openclaw_npm_install.rc | default(0) == 0 else 'failed - package may not be published or available' }}"
+    msg: >
+      OpenClaw npm installation:
+      {{ 'succeeded' if openclaw_npm_install.rc | default(0) == 0
+         else 'failed - package may not be published or available' }}
   tags:
     - openclaw
 

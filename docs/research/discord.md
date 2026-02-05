@@ -5,6 +5,7 @@ Yes! There are several ways to programmatically provision Discord channels, rang
 Use the [terraform-provider-discord](https://github.com/spaceshuttl/terraform-provider-discord) to define your entire server structure as code. Perfect if you want version-controlled, repeatable infrastructure.
 
 **Example Terraform config:**
+
 ```hcl
 terraform {
   required_providers {
@@ -51,6 +52,7 @@ resource "discord_text_channel" "writing" {
 ```
 
 **Advantages:**
+
 - Version control your entire Discord server structure
 - Easy to replicate servers (dev/test/prod)
 - Declarative - just describe what you want
@@ -58,6 +60,7 @@ resource "discord_text_channel" "writing" {
 - Works with CI/CD pipelines
 
 **Setup:**
+
 ```bash
 terraform init
 terraform plan
@@ -83,12 +86,12 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     print(f'Logged in as {client.user}')
-    
+
     guild = client.get_guild(SERVER_ID)
     if not guild:
         print("Server not found!")
         return
-    
+
     # Define your channel structure
     channel_config = {
         "AI WORKSPACE": [
@@ -103,13 +106,13 @@ async def on_ready():
             ("project-beta", "Beta project work")
         ]
     }
-    
+
     # Create categories and channels
     for category_name, channels in channel_config.items():
         # Create category
         category = await guild.create_category(category_name)
         print(f"Created category: {category_name}")
-        
+
         # Create text channels in category
         for channel_name, topic in channels:
             channel = await guild.create_text_channel(
@@ -118,7 +121,7 @@ async def on_ready():
                 topic=topic
             )
             print(f"  Created channel: #{channel_name}")
-    
+
     print("\nAll channels created! Shutting down...")
     await client.close()
 
@@ -126,6 +129,7 @@ client.run(TOKEN)
 ```
 
 **Run it:**
+
 ```bash
 pip install discord.py
 python setup_channels.py
@@ -136,8 +140,8 @@ python setup_channels.py
 ```javascript
 const { Client, GatewayIntentBits } = require('discord.js');
 
-const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds] 
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds]
 });
 
 const TOKEN = 'YOUR_BOT_TOKEN';
@@ -156,13 +160,13 @@ const channelConfig = {
 
 client.once('ready', async () => {
     const guild = client.guilds.cache.get(SERVER_ID);
-    
+
     for (const [categoryName, channels] of Object.entries(channelConfig)) {
         const category = await guild.channels.create({
             name: categoryName,
             type: 4 // CategoryChannel type
         });
-        
+
         for (const channelDef of channels) {
             await guild.channels.create({
                 name: channelDef.name,
@@ -172,7 +176,7 @@ client.once('ready', async () => {
             });
         }
     }
-    
+
     console.log('Channels created!');
     process.exit(0);
 });
@@ -190,6 +194,7 @@ Both [n8n](https://n8n.io) and [Pipedream](https://pipedream.com) have Discord i
 - Combine with other automation
 
 **n8n example workflow:**
+
 1. Read channel definitions from Google Sheet
 2. Loop through each row
 3. Create Discord channel for each entry
@@ -242,6 +247,7 @@ curl -X POST \
    - Documentation as code
 
 **Quick Start Steps:**
+
 1. Create a Discord Bot in the [Developer Portal](https://discord.com/developers/applications)
 2. Get your bot token
 3. Invite bot to your server with "Manage Channels" permission

@@ -60,7 +60,7 @@
 - name: Display available vaults
   debug:
     msg: "{{ op_vaults.stdout_lines }}"
-  when: 
+  when:
     - lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') != ''
     - op_vaults.rc == 0
   tags:

@@ -6,7 +6,7 @@
   hosts: all
   become: yes
   gather_facts: false
-  
+
   tasks:
     - name: Wait for systemd to be ready
       wait_for_connection:

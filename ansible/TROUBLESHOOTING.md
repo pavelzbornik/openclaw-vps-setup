@@ -381,7 +381,7 @@ Common issues and solutions when deploying OpenClaw with Ansible.
    ```bash
    # Stop service
    ssh openclaw@192.168.100.10 "sudo systemctl stop openclaw"
-   
+
    # Uninstall OpenClaw
    ssh openclaw@192.168.100.10 "npm uninstall -g @openclaw/openclaw"
    ```
