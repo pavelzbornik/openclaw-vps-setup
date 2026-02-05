@@ -21,8 +21,8 @@ openclaw_version: "latest"
 # These drive the `openclaw_vendor_base` role which reuses upstream task files.
 vendor_nodejs_enabled: true
 vendor_tailscale_enabled: true
-vendor_docker_enabled: false
-vendor_firewall_enabled: false
+vendor_docker_enabled: true
+vendor_firewall_enabled: true
 
 # OpenClaw onboarding behavior
 # If true, runs `openclaw onboard --install-daemon` (may manage systemd itself).
@@ -38,20 +38,6 @@ onepassword_cli_deb_url: "https://downloads.1password.com/linux/debian/amd64/sta
 # Service account token should be set as environment variable: OP_SERVICE_ACCOUNT_TOKEN
 # or encrypted with ansible-vault in a separate file
 
-# Firewall Configuration
-ufw_enabled: true
-ufw_default_incoming: deny
-ufw_default_outgoing: allow
-ufw_logging: medium
-
-ufw_rules:
-  - { port: 22, proto: tcp, rule: limit, comment: "SSH with rate limiting" }
-  - { port: 18789, proto: tcp, rule: allow, from_ip: "100.64.0.0/10", comment: "OpenClaw Gateway (Tailscale only)" }
-
-ufw_block_ports:
-  - { port: 445, proto: tcp, comment: "Block SMB" }
-  - { port: 139, proto: tcp, comment: "Block NetBIOS" }
-
 # Tailscale Configuration
 tailscale_enabled: true
 # Optional: auth key for unattended setup (upstream var name)
@@ -64,22 +50,10 @@ security_packages:
   - unattended-upgrades
 
 # Base System Packages
+# Note: Vendor handles most base packages (git, curl, wget, vim, htop, nano, etc.)
+# Only include additional packages not covered by vendor
 base_packages:
-  - git
-  - curl
-  - wget
-  - vim
-  - htop
-  - nano
-  - net-tools
-  - ca-certificates
-  - gnupg
-  - lsb-release
-  - apt-transport-https
-  - software-properties-common
-  - build-essential
-  - python3-pip
-  - jq
+  - python3-pip  # For Ansible modules
 
 # OpenClaw Configuration Template Variables
 # These reference 1Password secrets

@@ -54,12 +54,6 @@
         - secrets
         - 1password
 
-    - role: firewall
-      tags:
-        - firewall
-        - ufw
-        - security
-
     - role: openclaw
       tags:
         - openclaw
