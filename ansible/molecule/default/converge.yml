@@ -1,0 +1,6 @@
+---
+# Converge playbook for Molecule testing
+# This applies the main site.yml playbook to the test container
+
+- name: Include main site.yml playbook
+  import_playbook: ../../site.yml

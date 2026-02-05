@@ -1,0 +1,43 @@
+[Unit]
+Description=OpenClaw AI Agent Gateway
+Documentation=https://github.com/openclaw/openclaw
+After=network-online.target
+{% if tailscale_enabled %}
+After=tailscaled.service
+{% endif %}
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ openclaw_user }}
+Group={{ openclaw_group }}
+WorkingDirectory={{ openclaw_install_dir }}
+
+# Environment
+Environment="NODE_ENV=production"
+Environment="PATH={{ openclaw_home }}/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+EnvironmentFile={{ openclaw_install_dir }}/.env
+
+# Start OpenClaw
+ExecStart={{ openclaw_home }}/.npm-global/bin/openclaw start
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths={{ openclaw_install_dir }}
+ReadWritePaths={{ openclaw_workspace_dir }}
+ReadWritePaths={{ openclaw_logs_dir }}
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openclaw
+
+[Install]
+WantedBy=multi-user.target

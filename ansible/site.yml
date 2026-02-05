@@ -1,0 +1,134 @@
+---
+# Main playbook for OpenClaw VM provisioning
+# Usage: ansible-playbook -i inventory/hosts.yml site.yml
+
+- name: Provision OpenClaw VM
+  hosts: openclaw_vms
+  become: yes
+  
+  pre_tasks:
+    - name: Display target host information
+      debug:
+        msg: |
+          Provisioning OpenClaw on host: {{ inventory_hostname }}
+          IP Address: {{ ansible_host }}
+          User: {{ ansible_user }}
+      tags:
+        - always
+
+    - name: Wait for system to be ready
+      wait_for_connection:
+        timeout: 300
+      tags:
+        - always
+
+    - name: Gather facts
+      setup:
+      tags:
+        - always
+
+    - name: Display system information
+      debug:
+        msg: |
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel: {{ ansible_kernel }}
+          Architecture: {{ ansible_architecture }}
+          Python: {{ ansible_python_version }}
+      tags:
+        - always
+
+  roles:
+    - role: common
+      tags:
+        - common
+        - base
+
+    - role: nodejs
+      tags:
+        - nodejs
+        - node
+
+    - role: onepassword
+      tags:
+        - onepassword
+        - secrets
+        - 1password
+
+    - role: firewall
+      tags:
+        - firewall
+        - ufw
+        - security
+
+    - role: tailscale
+      tags:
+        - tailscale
+        - vpn
+        - networking
+
+    - role: openclaw
+      tags:
+        - openclaw
+        - app
+
+  post_tasks:
+    - name: Verify OpenClaw installation
+      stat:
+        path: "{{ openclaw_home }}/.npm-global/bin/openclaw"
+      register: openclaw_verify
+      tags:
+        - always
+
+    - name: Display OpenClaw installation status
+      debug:
+        msg: "OpenClaw successfully installed at {{ openclaw_home }}/.npm-global/bin/openclaw"
+      when: openclaw_verify.stat.exists
+      tags:
+        - always
+
+    - name: Check OpenClaw service status
+      systemd:
+        name: openclaw
+      register: openclaw_service
+      tags:
+        - always
+
+    - name: Display OpenClaw service status
+      debug:
+        msg: |
+          Service: {{ openclaw_service.name }}
+          State: {{ openclaw_service.status.ActiveState }}
+          Enabled: {{ 'yes' if openclaw_service.status.UnitFileState == 'enabled' else 'no' }}
+      when: openclaw_service is defined
+      tags:
+        - always
+
+    - name: Display next steps
+      debug:
+        msg: |
+          ========================================
+          OpenClaw Provisioning Complete!
+          ========================================
+          
+          Next steps:
+          
+          1. Configure secrets (if not already done):
+             - Set environment variables in {{ openclaw_install_dir }}/.env
+             - Or use 1Password CLI to inject secrets
+          
+          2. Configure Tailscale (if not already done):
+             SSH to VM and run: sudo tailscale up
+          
+          3. Start OpenClaw service:
+             sudo systemctl start openclaw
+          
+          4. Check logs:
+             sudo journalctl -u openclaw -f
+          
+          5. Access OpenClaw Gateway:
+             - Via Tailscale: http://<tailscale-ip>:{{ openclaw_port }}
+             - Locally: http://localhost:{{ openclaw_port }}
+          
+          ========================================
+      tags:
+        - always

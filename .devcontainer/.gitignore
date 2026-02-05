@@ -1,0 +1,3 @@
+# DevContainer files - VS Code development container configuration
+*.log
+.env

@@ -1,0 +1,38 @@
+---
+# Molecule prepare playbook
+# Sets up the test environment before running the main playbook
+
+- name: Prepare test environment
+  hosts: all
+  become: yes
+  gather_facts: false
+  
+  tasks:
+    - name: Wait for systemd to be ready
+      wait_for_connection:
+        timeout: 60
+
+    - name: Install Python3 for Ansible
+      raw: |
+        apt-get update
+        apt-get install -y python3 python3-apt sudo
+      changed_when: false
+
+    - name: Gather facts after Python installation
+      setup:
+
+    - name: Create openclaw user for testing
+      user:
+        name: openclaw
+        groups: sudo
+        append: yes
+        shell: /bin/bash
+        create_home: yes
+        state: present
+
+    - name: Allow openclaw user to sudo without password
+      copy:
+        content: "openclaw ALL=(ALL) NOPASSWD: ALL\n"
+        dest: /etc/sudoers.d/openclaw
+        mode: '0440'
+        validate: 'visudo -cf %s'

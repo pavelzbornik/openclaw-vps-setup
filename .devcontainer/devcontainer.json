@@ -1,0 +1,93 @@
+{
+  "name": "OpenClaw Ansible Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "ansible-control",
+  "workspaceFolder": "/workspaces/openclaw",
+
+  // Environment variables to fix Windows PTY issues
+  "remoteEnv": {
+    "TERM": "dumb"
+  },
+
+  // Disable TTY to prevent ConPTY issues on Windows Insiders
+  "containerEnv": {
+    "TERM": "dumb"
+  },
+
+  // Comment out to connect as root instead
+  "remoteUser": "vscode",
+
+  // Features to add to the dev container
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    }
+  },
+
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.ansible",
+        "redhat.vscode-yaml",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-azuretools.vscode-docker",
+        "streetsidesoftware.code-spell-checker",
+        "esbenp.prettier-vscode"
+      ],
+      "settings": {
+        "ansible.python.interpreterPath": "/usr/bin/python3",
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "python.formatting.provider": "black",
+        "editor.formatOnSave": true,
+        "files.associations": {
+          "*.yml": "ansible",
+          "*.yaml": "ansible"
+        },
+        "yaml.schemas": {
+          "https://raw.githubusercontent.com/ansible/ansible-lint/main/src/ansiblelint/schemas/ansible.json": [
+            "playbooks/*.yml",
+            "playbooks/*.yaml",
+            "roles/*/tasks/*.yml",
+            "roles/*/tasks/*.yaml"
+          ]
+        }
+      }
+    }
+  },
+
+  // Run commands after container creation
+  "postCreateCommand": "bash -c 'echo Setup complete'",
+
+  // Forward ports for testing
+  "forwardPorts": [
+    18789 // OpenClaw Gateway
+  ],
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally
+  "portsAttributes": {
+    "18789": {
+      "label": "OpenClaw Gateway",
+      "onAutoForward": "notify"
+    }
+  },
+
+  // Comment out to connect as root instead
+  "remoteUser": "vscode",
+
+  // Keep container running for better performance
+  "runServices": ["ansible-control", "ubuntu-target"],
+
+  // Mount the Docker socket for Docker-in-Docker
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ]
+}

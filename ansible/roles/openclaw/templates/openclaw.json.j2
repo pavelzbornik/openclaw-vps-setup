@@ -1,0 +1,30 @@
+{
+  "agent": {
+    "model": "{{ openclaw_config.agent.model }}"
+  },
+  "gateway": {
+    "bind": "{{ openclaw_config.gateway.bind }}",
+    "port": {{ openclaw_config.gateway.port }},
+    "auth": {
+      "mode": "{{ openclaw_config.gateway.auth.mode }}",
+      "token": "{{ openclaw_config.gateway.auth.token }}"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": {{ openclaw_config.channels.telegram.enabled | lower }},
+      "dmPolicy": "{{ openclaw_config.channels.telegram.dmPolicy }}"
+    },
+    "discord": {
+      "enabled": {{ openclaw_config.channels.discord.enabled | lower }},
+      "dmPolicy": "{{ openclaw_config.channels.discord.dmPolicy }}"
+    }
+  },
+  "workspace": {
+    "path": "{{ openclaw_workspace_dir }}"
+  },
+  "logging": {
+    "level": "info",
+    "path": "{{ openclaw_logs_dir }}"
+  }
+}

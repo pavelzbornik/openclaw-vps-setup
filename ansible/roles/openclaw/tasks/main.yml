@@ -1,0 +1,116 @@
+---
+# OpenClaw role: Install and configure OpenClaw
+
+- name: Create OpenClaw directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0755'
+  loop:
+    - "{{ openclaw_install_dir }}"
+    - "{{ openclaw_config_dir }}"
+    - "{{ openclaw_workspace_dir }}"
+    - "{{ openclaw_logs_dir }}"
+  tags:
+    - openclaw
+    - directories
+
+- name: Install OpenClaw via npm
+  become: yes
+  become_user: "{{ openclaw_user }}"
+  npm:
+    name: "{{ openclaw_npm_package }}"
+    global: yes
+    state: "{{ 'latest' if openclaw_version == 'latest' else 'present' }}"
+    version: "{{ omit if openclaw_version == 'latest' else openclaw_version }}"
+  environment:
+    PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
+    npm_config_prefix: "{{ openclaw_home }}/.npm-global"
+  tags:
+    - openclaw
+    - install
+
+- name: Check if OpenClaw is installed
+  stat:
+    path: "{{ openclaw_home }}/.npm-global/bin/openclaw"
+  register: openclaw_binary
+  tags:
+    - openclaw
+
+- name: Display OpenClaw installation status
+  debug:
+    msg: "OpenClaw binary found at {{ openclaw_home }}/.npm-global/bin/openclaw"
+  when: openclaw_binary.stat.exists
+  tags:
+    - openclaw
+
+- name: Create OpenClaw configuration file
+  template:
+    src: openclaw.json.j2
+    dest: "{{ openclaw_config_dir }}/openclaw.json"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0600'
+  notify: restart openclaw
+  tags:
+    - openclaw
+    - config
+
+- name: Create OpenClaw environment file
+  template:
+    src: openclaw.env.j2
+    dest: "{{ openclaw_install_dir }}/.env"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0600'
+  notify: restart openclaw
+  tags:
+    - openclaw
+    - config
+
+- name: Create systemd service file for OpenClaw
+  template:
+    src: openclaw.service.j2
+    dest: /etc/systemd/system/openclaw.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - reload systemd
+    - restart openclaw
+  tags:
+    - openclaw
+    - systemd
+
+- name: Enable OpenClaw service
+  systemd:
+    name: openclaw
+    enabled: yes
+    daemon_reload: yes
+  tags:
+    - openclaw
+    - systemd
+
+- name: Create logrotate configuration for OpenClaw
+  copy:
+    dest: /etc/logrotate.d/openclaw
+    content: |
+      {{ openclaw_logs_dir }}/*.log {
+          daily
+          missingok
+          rotate 14
+          compress
+          delaycompress
+          notifempty
+          create 0640 {{ openclaw_user }} {{ openclaw_group }}
+          sharedscripts
+          postrotate
+              systemctl reload openclaw > /dev/null 2>&1 || true
+          endscript
+      }
+    mode: '0644'
+  tags:
+    - openclaw
+    - logging

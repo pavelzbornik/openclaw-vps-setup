@@ -1,0 +1,6 @@
+---
+# Handlers for firewall role
+
+- name: reload ufw
+  ufw:
+    state: reloaded

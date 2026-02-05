@@ -1,0 +1,48 @@
+# .gitignore for Ansible directory
+
+# Ansible
+*.retry
+.molecule/
+molecule/.molecule/
+__pycache__/
+*.pyc
+
+# Secrets and credentials
+*.vault
+*.secret
+.env
+secrets.yml
+vault-password.txt
+
+# SSH keys
+*.pem
+*.key
+openclaw_vm
+openclaw_vm.pub
+
+# 1Password
+.op/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Backup files
+*.bak
+*.backup
+*~

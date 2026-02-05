@@ -1,0 +1,67 @@
+---
+# 1Password CLI role: Install and configure 1Password CLI
+
+- name: Check if 1Password CLI is already installed
+  command: which op
+  register: op_installed
+  changed_when: false
+  failed_when: false
+  tags:
+    - onepassword
+
+- name: Download 1Password CLI
+  get_url:
+    url: "{{ onepassword_cli_deb_url }}"
+    dest: /tmp/1password-cli.deb
+    mode: '0644'
+  when: op_installed.rc != 0
+  tags:
+    - onepassword
+
+- name: Install 1Password CLI
+  apt:
+    deb: /tmp/1password-cli.deb
+    state: present
+  when: op_installed.rc != 0
+  tags:
+    - onepassword
+
+- name: Verify 1Password CLI installation
+  command: op --version
+  register: op_version
+  changed_when: false
+  tags:
+    - onepassword
+
+- name: Display 1Password CLI version
+  debug:
+    msg: "1Password CLI version: {{ op_version.stdout }}"
+  tags:
+    - onepassword
+
+- name: Check if OP_SERVICE_ACCOUNT_TOKEN is set
+  debug:
+    msg: "Warning: OP_SERVICE_ACCOUNT_TOKEN environment variable not set. 1Password lookups will not work."
+  when: lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') == ''
+  tags:
+    - onepassword
+
+- name: Test 1Password connection (if token available)
+  command: op vault list
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
+  register: op_vaults
+  changed_when: false
+  failed_when: false
+  when: lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') != ''
+  tags:
+    - onepassword
+
+- name: Display available vaults
+  debug:
+    msg: "{{ op_vaults.stdout_lines }}"
+  when: 
+    - lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') != ''
+    - op_vaults.rc == 0
+  tags:
+    - onepassword

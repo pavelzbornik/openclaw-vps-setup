@@ -1,0 +1,13 @@
+# Test container inventory for DevContainer testing
+all:
+  children:
+    openclaw_vms:
+      hosts:
+        ubuntu-target:
+          ansible_host: ubuntu-target
+          ansible_user: root
+          ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+          ansible_python_interpreter: /usr/bin/python3
+          ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+      vars:
+        ansible_connection: ssh

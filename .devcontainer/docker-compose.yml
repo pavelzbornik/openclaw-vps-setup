@@ -1,0 +1,48 @@
+services:
+  # Ansible control node (your development environment)
+  ansible-control:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../..:/workspaces:cached
+      - /var/run/docker.sock:/var/run/docker.sock:z
+    command: sleep infinity
+    networks:
+      - ansible-test-network
+    environment:
+      - ANSIBLE_HOST_KEY_CHECKING=False
+      - ANSIBLE_STDOUT_CALLBACK=yaml
+    working_dir: /workspaces/openclaw/ansible
+
+  # Ubuntu target (simulates your VM)
+  ubuntu-target:
+    build:
+      context: .
+      dockerfile: ubuntu-target.Dockerfile
+    image: openclaw/ubuntu-target:24.04-systemd
+    hostname: openclaw-vm
+    networks:
+      - ansible-test-network
+    volumes:
+      - target-home:/home/openclaw
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    command: /lib/systemd/systemd
+    privileged: true
+    cgroup: host
+    tmpfs:
+      - /run
+      - /run/lock
+      - /tmp
+    ports:
+      # Use random host ports by default to avoid conflicts on developer machines.
+      # Set OPENCLAW_SSH_PORT / OPENCLAW_GATEWAY_PORT if you need fixed ports.
+      - "${OPENCLAW_SSH_PORT:-0}:22" # SSH access
+      - "${OPENCLAW_GATEWAY_PORT:-0}:18789" # OpenClaw Gateway
+
+networks:
+  ansible-test-network:
+    driver: bridge
+
+volumes:
+  target-home:

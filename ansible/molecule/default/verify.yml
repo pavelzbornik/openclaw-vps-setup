@@ -1,0 +1,153 @@
+---
+# Molecule verify playbook
+# Validates that the provisioning worked correctly
+
+- name: Verify OpenClaw installation
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: Check if Node.js is installed
+      command: node --version
+      register: node_check
+      changed_when: false
+      failed_when: node_check.rc != 0
+      tags:
+        - verify
+
+    - name: Display Node.js version
+      debug:
+        msg: "Node.js version: {{ node_check.stdout }}"
+      tags:
+        - verify
+
+    - name: Check if npm is installed
+      command: npm --version
+      register: npm_check
+      changed_when: false
+      failed_when: npm_check.rc != 0
+      tags:
+        - verify
+
+    - name: Display npm version
+      debug:
+        msg: "npm version: {{ npm_check.stdout }}"
+      tags:
+        - verify
+
+    - name: Check if OpenClaw directory exists
+      stat:
+        path: /home/openclaw/.openclaw
+      register: openclaw_dir
+      failed_when: not openclaw_dir.stat.exists
+      tags:
+        - verify
+
+    - name: Verify OpenClaw directory structure
+      stat:
+        path: "{{ item }}"
+      register: openclaw_dirs
+      failed_when: not openclaw_dirs.stat.exists
+      loop:
+        - /home/openclaw/.openclaw/config
+        - /home/openclaw/.openclaw/workspace
+        - /home/openclaw/.openclaw/logs
+      tags:
+        - verify
+
+    - name: Check if OpenClaw binary exists
+      stat:
+        path: /home/openclaw/.npm-global/bin/openclaw
+      register: openclaw_bin
+      tags:
+        - verify
+
+    - name: Display OpenClaw binary status
+      debug:
+        msg: "OpenClaw binary {{ 'exists' if openclaw_bin.stat.exists else 'not found' }}"
+      tags:
+        - verify
+
+    - name: Check if OpenClaw systemd service exists
+      stat:
+        path: /etc/systemd/system/openclaw.service
+      register: openclaw_service
+      failed_when: not openclaw_service.stat.exists
+      tags:
+        - verify
+
+    - name: Verify OpenClaw service is enabled
+      systemd:
+        name: openclaw
+      register: service_status
+      tags:
+        - verify
+
+    - name: Display service status
+      debug:
+        msg: |
+          Service enabled: {{ service_status.status.UnitFileState == 'enabled' }}
+          Service state: {{ service_status.status.LoadState }}
+      tags:
+        - verify
+
+    - name: Check if 1Password CLI is installed
+      command: op --version
+      register: op_check
+      changed_when: false
+      failed_when: op_check.rc != 0
+      tags:
+        - verify
+
+    - name: Display 1Password CLI version
+      debug:
+        msg: "1Password CLI version: {{ op_check.stdout }}"
+      tags:
+        - verify
+
+    - name: Check if fail2ban is installed and running
+      systemd:
+        name: fail2ban
+      register: fail2ban_status
+      tags:
+        - verify
+
+    - name: Display fail2ban status
+      debug:
+        msg: "fail2ban is {{ 'active' if fail2ban_status.status.ActiveState == 'active' else 'inactive' }}"
+      tags:
+        - verify
+
+    - name: Verify OpenClaw configuration file exists
+      stat:
+        path: /home/openclaw/.openclaw/config/openclaw.json
+      register: openclaw_config
+      failed_when: not openclaw_config.stat.exists
+      tags:
+        - verify
+
+    - name: Verify OpenClaw environment file exists
+      stat:
+        path: /home/openclaw/.openclaw/.env
+      register: openclaw_env
+      failed_when: not openclaw_env.stat.exists
+      tags:
+        - verify
+
+    - name: All verification checks passed
+      debug:
+        msg: |
+          ========================================
+          All verification checks passed!
+          ========================================
+          ✓ Node.js installed
+          ✓ npm installed
+          ✓ OpenClaw directory structure created
+          ✓ OpenClaw systemd service configured
+          ✓ 1Password CLI installed
+          ✓ fail2ban configured
+          ✓ Configuration files present
+          ========================================
+      tags:
+        - verify

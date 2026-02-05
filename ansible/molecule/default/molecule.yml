@@ -1,0 +1,60 @@
+---
+# Molecule configuration for testing OpenClaw Ansible playbooks
+
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: openclaw-test
+    image: geerlingguy/docker-ubuntu2404-ansible:latest
+    command: /lib/systemd/systemd
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    cgroupns_mode: host
+    privileged: true
+    pre_build_image: true
+    networks:
+      - name: openclaw-test-network
+
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+      callback_whitelist: profile_tasks, timer, yaml
+  inventory:
+    group_vars:
+      all:
+        # Override variables for testing
+        openclaw_user: openclaw
+        openclaw_group: openclaw
+        timezone: UTC
+        locale: en_US.UTF-8
+        # Disable Tailscale for local testing
+        tailscale_enabled: false
+        # UFW might not work properly in containers
+        ufw_enabled: false
+
+verifier:
+  name: ansible
+
+scenario:
+  name: default
+  test_sequence:
+    - dependency
+    - cleanup
+    - destroy
+    - syntax
+    - create
+    - prepare
+    - converge
+    - idempotence
+    - side_effect
+    - verify
+    - cleanup
+    - destroy
