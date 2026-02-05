@@ -1,68 +1,81 @@
 ---
-# Node.js role: Install Node.js 20.x from NodeSource
+# Node.js role: Install Node.js from NodeSource
 
-- name: Check if NodeSource repository is already configured
-  stat:
-    path: /etc/apt/sources.list.d/nodesource.list
-  register: nodesource_repo
+- name: Install Node.js via upstream openclaw-ansible role (optional)
+  include_role:
+    name: clawdbot
+    tasks_from: nodejs
+  when: openclaw_upstream_ansible_enabled | default(false)
   tags:
     - nodejs
 
-- name: Download NodeSource setup script
-  get_url:
-    url: "https://deb.nodesource.com/setup_{{ nodejs_version }}.x"
-    dest: /tmp/nodesource_setup.sh
-    mode: '0755'
-  when: not nodesource_repo.stat.exists
-  tags:
-    - nodejs
+- name: Install Node.js via local NodeSource setup script (legacy)
+  block:
+    - name: Check if NodeSource repository is already configured
+      stat:
+        path: /etc/apt/sources.list.d/nodesource.list
+      register: nodesource_repo
+      tags:
+        - nodejs
 
-- name: Run NodeSource setup script
-  command: bash /tmp/nodesource_setup.sh
-  args:
-    creates: /etc/apt/sources.list.d/nodesource.list
-  when: not nodesource_repo.stat.exists
-  tags:
-    - nodejs
+    - name: Download NodeSource setup script
+      get_url:
+        url: "https://deb.nodesource.com/setup_{{ nodejs_version }}"
+        dest: /tmp/nodesource_setup.sh
+        mode: '0755'
+      when: not nodesource_repo.stat.exists
+      tags:
+        - nodejs
 
-- name: Update apt cache after NodeSource setup
-  apt:
-    update_cache: yes
-  when: not nodesource_repo.stat.exists
-  tags:
-    - nodejs
+    - name: Run NodeSource setup script
+      command: bash /tmp/nodesource_setup.sh
+      args:
+        creates: /etc/apt/sources.list.d/nodesource.list
+      when: not nodesource_repo.stat.exists
+      tags:
+        - nodejs
 
-- name: Install Node.js
-  apt:
-    name: nodejs
-    state: present
-  tags:
-    - nodejs
-    - packages
+    - name: Update apt cache after NodeSource setup
+      apt:
+        update_cache: yes
+      when: not nodesource_repo.stat.exists
+      tags:
+        - nodejs
 
-- name: Verify Node.js installation
-  command: node --version
-  register: node_version
-  changed_when: false
-  tags:
-    - nodejs
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+      tags:
+        - nodejs
+        - packages
 
-- name: Verify npm installation
-  command: npm --version
-  register: npm_version
-  changed_when: false
-  tags:
-    - nodejs
+    - name: Verify Node.js installation
+      command: node --version
+      register: node_version
+      changed_when: false
+      tags:
+        - nodejs
 
-- name: Display Node.js version
-  debug:
-    msg: "Node.js version: {{ node_version.stdout }}"
-  tags:
-    - nodejs
+    - name: Verify npm installation
+      command: npm --version
+      register: npm_version
+      changed_when: false
+      tags:
+        - nodejs
 
-- name: Display npm version
-  debug:
-    msg: "npm version: {{ npm_version.stdout }}"
+    - name: Display Node.js version
+      debug:
+        msg: "Node.js version: {{ node_version.stdout }}"
+      tags:
+        - nodejs
+
+    - name: Display npm version
+      debug:
+        msg: "npm version: {{ npm_version.stdout }}"
+      tags:
+        - nodejs
+  when: not (openclaw_upstream_ansible_enabled | default(false))
   tags:
     - nodejs
 

@@ -9,6 +9,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/ansible"
 
+# Ensure upstream vendored roles are discoverable even if ansible.cfg
+# is ignored due to directory permissions.
+export ANSIBLE_ROLES_PATH="$SCRIPT_DIR/ansible/roles:$SCRIPT_DIR/ansible/vendor/openclaw-ansible/roles${ANSIBLE_ROLES_PATH:+:$ANSIBLE_ROLES_PATH}"
+
 # Use test container inventory by default
 INVENTORY="inventory/test-container.yml"
 PLAYBOOK="site.yml"

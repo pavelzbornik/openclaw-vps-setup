@@ -1,6 +1,67 @@
 ---
 # OpenClaw role: Install and configure OpenClaw
 
+- name: Ensure npm global prefix is configured for OpenClaw user
+  block:
+    - name: Create npm global directory for user
+      file:
+        path: "{{ openclaw_home }}/.npm-global"
+        state: directory
+        owner: "{{ openclaw_user }}"
+        group: "{{ openclaw_group }}"
+        mode: '0755'
+
+    - name: Remove npm cache directory to fix ownership issues
+      file:
+        path: "{{ openclaw_home }}/.npm"
+        state: absent
+
+    - name: Create empty npm cache directory with proper permissions
+      file:
+        path: "{{ openclaw_home }}/.npm"
+        state: directory
+        owner: "{{ openclaw_user }}"
+        group: "{{ openclaw_group }}"
+        mode: '0700'
+
+    - name: Create .ansible/tmp directory with proper permissions
+      file:
+        path: "{{ openclaw_home }}/.ansible/tmp"
+        state: directory
+        owner: "{{ openclaw_user }}"
+        group: "{{ openclaw_group }}"
+        mode: '0700'
+
+    - name: Ensure .npmrc exists
+      file:
+        path: "{{ openclaw_home }}/.npmrc"
+        state: touch
+        owner: "{{ openclaw_user }}"
+        group: "{{ openclaw_group }}"
+        mode: '0644'
+
+    - name: Configure npm prefix in .npmrc
+      lineinfile:
+        path: "{{ openclaw_home }}/.npmrc"
+        line: "prefix={{ openclaw_home }}/.npm-global"
+        create: yes
+        owner: "{{ openclaw_user }}"
+        group: "{{ openclaw_group }}"
+        mode: '0644'
+
+    - name: Add npm global bin to PATH in .bashrc
+      lineinfile:
+        path: "{{ openclaw_home }}/.bashrc"
+        line: 'export PATH="{{ openclaw_home }}/.npm-global/bin:$PATH"'
+        create: yes
+        owner: "{{ openclaw_user }}"
+        group: "{{ openclaw_group }}"
+        mode: '0644'
+  tags:
+    - openclaw
+    - nodejs
+    - npm
+
 - name: Create OpenClaw directory structure
   file:
     path: "{{ item }}"
@@ -43,7 +104,9 @@
   register: openclaw_onboard
   changed_when: "'already' not in openclaw_onboard.stdout | lower"
   ignore_errors: yes
-  when: openclaw_npm_install.rc | default(0) == 0
+  when:
+    - openclaw_npm_install.rc | default(0) == 0
+    - openclaw_onboard_install_daemon | default(false)
   tags:
     - openclaw
     - install
@@ -57,7 +120,10 @@
 - name: Display OpenClaw onboarding status
   debug:
     msg: "OpenClaw onboarding completed successfully"
-  when: openclaw_onboard is defined and openclaw_onboard.rc | default(0) == 0
+  when:
+    - openclaw_onboard is defined
+    - not (openclaw_onboard.skipped | default(false))
+    - openclaw_onboard.rc | default(0) == 0
   tags:
     - openclaw
 

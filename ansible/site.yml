@@ -38,15 +38,15 @@
         - always
 
   roles:
+    - role: openclaw_vendor_base
+      tags:
+        - vendor
+        - base
+
     - role: common
       tags:
         - common
         - base
-
-    - role: nodejs
-      tags:
-        - nodejs
-        - node
 
     - role: onepassword
       tags:
@@ -59,12 +59,6 @@
         - firewall
         - ufw
         - security
-
-    - role: tailscale
-      tags:
-        - tailscale
-        - vpn
-        - networking
 
     - role: openclaw
       tags:

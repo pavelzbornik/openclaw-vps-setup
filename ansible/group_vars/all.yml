@@ -17,8 +17,20 @@ openclaw_port: 18789
 openclaw_npm_package: "openclaw"  # Official package from npm registry
 openclaw_version: "latest"
 
+# Vendor base controls (recommended approach)
+# These drive the `openclaw_vendor_base` role which reuses upstream task files.
+vendor_nodejs_enabled: true
+vendor_tailscale_enabled: true
+vendor_docker_enabled: false
+vendor_firewall_enabled: false
+
+# OpenClaw onboarding behavior
+# If true, runs `openclaw onboard --install-daemon` (may manage systemd itself).
+# If false, Ansible templates the systemd service + config files.
+openclaw_onboard_install_daemon: false
+
 # Node.js Configuration
-nodejs_version: "22"  # OpenClaw requires Node >=22
+nodejs_version: "22.x"  # OpenClaw requires Node >=22 (NodeSource format)
 
 # 1Password Configuration
 onepassword_cli_version: "latest"
@@ -42,8 +54,8 @@ ufw_block_ports:
 
 # Tailscale Configuration
 tailscale_enabled: true
-# Auth key should come from 1Password or be set as variable
-# tailscale_auth_key: "{{ lookup('env', 'TAILSCALE_AUTH_KEY') }}"
+# Optional: auth key for unattended setup (upstream var name)
+# tailscale_authkey: "tskey-auth-xxxxx"
 
 # Security Packages
 security_packages:

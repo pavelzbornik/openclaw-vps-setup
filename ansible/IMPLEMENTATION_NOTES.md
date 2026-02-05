@@ -6,7 +6,7 @@
 
 **The actual OpenClaw npm package name needs to be verified!**
 
-Currently configured as: `@openclaw/openclaw` (in `group_vars/all.yml`)
+Currently configured as: `openclaw` (in `group_vars/all.yml`)
 
 **To find the correct package:**
 
@@ -69,11 +69,10 @@ ansible/
 │   └── all.yml                      # Global configuration variables
 ├── roles/
 │   ├── common/                      # Base system setup
-│   ├── nodejs/                      # Node.js 20.x installation
+│   ├── openclaw_vendor_base/        # Vendored upstream baseline (Node.js + pnpm, Tailscale; optional Docker/firewall)
 │   ├── openclaw/                    # OpenClaw installation & config
 │   ├── onepassword/                 # 1Password CLI setup
-│   ├── firewall/                    # UFW firewall configuration
-│   └── tailscale/                   # Tailscale VPN setup
+│   └── firewall/                    # UFW firewall configuration
 ├── molecule/
 │   └── default/                     # Molecule testing framework
 ├── scripts/
@@ -100,12 +99,15 @@ ansible/
 - Sets timezone and locale
 - Creates OpenClaw user
 
-#### 2. Node.js Role
+#### 2. Vendor Base (Upstream)
 
-- Adds NodeSource repository for Node.js 20.x
-- Installs Node.js and npm
-- Configures npm global directory for user
-- Updates PATH in .bashrc
+This workspace vendors https://github.com/openclaw/openclaw-ansible and uses it as the baseline via the `openclaw_vendor_base` role:
+
+- Node.js + pnpm install (upstream)
+- Tailscale install (upstream)
+
+This avoids duplicating community work while keeping OpenClaw-specific configuration, systemd service, and 1Password integration local.
+See `ansible/UPSTREAM_OPENCLAW_ANSIBLE.md` for details.
 
 #### 3. OpenClaw Role
 
@@ -129,13 +131,6 @@ ansible/
 - Opens OpenClaw Gateway (port 18789) only from Tailscale network
 - Blocks SMB/NetBIOS ports
 - Enables firewall logging
-
-#### 6. Tailscale Role
-
-- Adds Tailscale repository
-- Installs Tailscale
-- Provides instructions for authentication
-- Enables tailscaled service
 
 ### Testing with Molecule
 
@@ -222,7 +217,7 @@ chmod +x scripts/*.sh
 ansible all -i inventory/hosts.yml -m ping
 
 # 3. Install Ansible collections
-ansible-galaxy install -r requirements.yml
+ansible-galaxy collection install -r requirements.yml
 
 # 4. Test in Docker (optional but recommended)
 molecule test

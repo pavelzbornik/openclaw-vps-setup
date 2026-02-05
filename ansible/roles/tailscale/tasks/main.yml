@@ -1,91 +1,96 @@
 ---
 # Tailscale role: Install and configure Tailscale VPN
 
-- name: Check if Tailscale is already installed
-  command: which tailscale
-  register: tailscale_installed
-  changed_when: false
-  failed_when: false
-  tags:
-    - tailscale
-
-- name: Add Tailscale GPG key
-  apt_key:
-    url: "https://pkgs.tailscale.com/stable/ubuntu/{{ ansible_distribution_release }}.noarmor.gpg"
-    state: present
-  when: 
-    - tailscale_enabled
-    - tailscale_installed.rc != 0
-  tags:
-    - tailscale
-
-- name: Add Tailscale repository
-  apt_repository:
-    repo: "deb https://pkgs.tailscale.com/stable/ubuntu {{ ansible_distribution_release }} main"
-    state: present
-    filename: tailscale
+- name: Install Tailscale via upstream openclaw-ansible role (optional)
+  include_role:
+    name: clawdbot
+    tasks_from: tailscale
   when:
     - tailscale_enabled
-    - tailscale_installed.rc != 0
+    - openclaw_upstream_ansible_enabled | default(false)
   tags:
     - tailscale
 
-- name: Update apt cache
-  apt:
-    update_cache: yes
+- name: Install Tailscale via local tasks (legacy)
+  block:
+    - name: Check if Tailscale is already installed
+      command: which tailscale
+      register: tailscale_installed
+      changed_when: false
+      failed_when: false
+      tags:
+        - tailscale
+
+    - name: Add Tailscale GPG key
+      apt_key:
+        url: "https://pkgs.tailscale.com/stable/ubuntu/{{ ansible_distribution_release }}.noarmor.gpg"
+        state: present
+      when:
+        - tailscale_installed.rc != 0
+      tags:
+        - tailscale
+
+    - name: Add Tailscale repository
+      apt_repository:
+        repo: "deb https://pkgs.tailscale.com/stable/ubuntu {{ ansible_distribution_release }} main"
+        state: present
+        filename: tailscale
+      when: tailscale_installed.rc != 0
+      tags:
+        - tailscale
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+      when: tailscale_installed.rc != 0
+      tags:
+        - tailscale
+
+    - name: Install Tailscale
+      apt:
+        name: tailscale
+        state: present
+      tags:
+        - tailscale
+        - packages
+
+    - name: Ensure Tailscale service is enabled and started
+      systemd:
+        name: tailscaled
+        enabled: yes
+        state: started
+      tags:
+        - tailscale
+
+    - name: Check Tailscale status
+      command: tailscale status
+      register: tailscale_status
+      changed_when: false
+      failed_when: false
+      tags:
+        - tailscale
+
+    - name: Display Tailscale status
+      debug:
+        msg: "{{ tailscale_status.stdout_lines }}"
+      when: tailscale_status.rc == 0
+      tags:
+        - tailscale
+
+    - name: Display Tailscale authentication instructions
+      debug:
+        msg: |
+          Tailscale is installed but not authenticated.
+          To authenticate, run on the VM:
+            sudo tailscale up
+          
+          Or use an auth key (set tailscale_auth_key variable):
+            sudo tailscale up --auth-key={{ tailscale_auth_key | default('YOUR_AUTH_KEY') }}
+      when: tailscale_status.rc != 0
+      tags:
+        - tailscale
   when:
     - tailscale_enabled
-    - tailscale_installed.rc != 0
-  tags:
-    - tailscale
-
-- name: Install Tailscale
-  apt:
-    name: tailscale
-    state: present
-  when: tailscale_enabled
-  tags:
-    - tailscale
-    - packages
-
-- name: Ensure Tailscale service is enabled and started
-  systemd:
-    name: tailscaled
-    enabled: yes
-    state: started
-  when: tailscale_enabled
-  tags:
-    - tailscale
-
-- name: Check Tailscale status
-  command: tailscale status
-  register: tailscale_status
-  changed_when: false
-  failed_when: false
-  when: tailscale_enabled
-  tags:
-    - tailscale
-
-- name: Display Tailscale status
-  debug:
-    msg: "{{ tailscale_status.stdout_lines }}"
-  when:
-    - tailscale_enabled
-    - tailscale_status.rc == 0
-  tags:
-    - tailscale
-
-- name: Display Tailscale authentication instructions
-  debug:
-    msg: |
-      Tailscale is installed but not authenticated.
-      To authenticate, run on the VM:
-        sudo tailscale up
-      
-      Or use an auth key (set tailscale_auth_key variable):
-        sudo tailscale up --auth-key={{ tailscale_auth_key | default('YOUR_AUTH_KEY') }}
-  when:
-    - tailscale_enabled
-    - tailscale_status.rc != 0
+    - not (openclaw_upstream_ansible_enabled | default(false))
   tags:
     - tailscale

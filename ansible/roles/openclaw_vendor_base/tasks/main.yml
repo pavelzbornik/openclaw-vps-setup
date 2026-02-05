@@ -1,0 +1,44 @@
+---
+# Base provisioning using vendored openclaw/openclaw-ansible tasks.
+#
+# This role intentionally reuses upstream task files (nodejs/tailscale and
+# optionally docker+firewall) while keeping OpenClaw-specific setup in local roles.
+
+- name: Vendor base | Assert firewall implies docker
+  ansible.builtin.fail:
+    msg: "vendor_firewall_enabled=true requires vendor_docker_enabled=true (upstream firewall config writes Docker/UFW integration and restarts docker)."
+  when:
+    - vendor_firewall_enabled | default(false)
+    - not (vendor_docker_enabled | default(false))
+
+- name: Vendor base | Install Docker (upstream)
+  ansible.builtin.include_role:
+    name: clawdbot
+    tasks_from: docker
+  when: vendor_docker_enabled | default(false)
+  tags:
+    - docker
+
+- name: Vendor base | Configure firewall (upstream)
+  ansible.builtin.include_role:
+    name: clawdbot
+    tasks_from: firewall
+  when: vendor_firewall_enabled | default(false)
+  tags:
+    - firewall
+
+- name: Vendor base | Install Node.js + pnpm (upstream)
+  ansible.builtin.include_role:
+    name: clawdbot
+    tasks_from: nodejs
+  when: vendor_nodejs_enabled | default(true)
+  tags:
+    - nodejs
+
+- name: Vendor base | Install Tailscale (upstream)
+  ansible.builtin.include_role:
+    name: clawdbot
+    tasks_from: tailscale
+  when: vendor_tailscale_enabled | default(true)
+  tags:
+    - tailscale

@@ -40,7 +40,7 @@ install:
 	sudo add-apt-repository --yes --update ppa:ansible/ansible
 	sudo apt install -y ansible
 	pip3 install molecule molecule-plugins[docker] ansible-lint docker
-	ansible-galaxy install -r requirements.yml
+	ansible-galaxy collection install -r requirements.yml
 	@echo "✓ Installation complete"
 
 # Run Molecule tests
@@ -96,8 +96,11 @@ snapshot:
 deploy-common:
 	$(MAKE) deploy TAGS=common
 
-deploy-nodejs:
+deploy-base-nodejs:
 	$(MAKE) deploy TAGS=nodejs
+
+deploy-base-tailscale:
+	$(MAKE) deploy TAGS=tailscale
 
 deploy-openclaw:
 	$(MAKE) deploy TAGS=openclaw

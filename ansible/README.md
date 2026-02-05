@@ -62,7 +62,7 @@ sudo apt install -y ansible
 pip3 install molecule molecule-plugins[docker] ansible-lint
 
 # Install Ansible collections
-ansible-galaxy install -r requirements.yml
+   ansible-galaxy collection install -r requirements.yml
 ```
 
 ### 2. Configure Inventory
@@ -131,11 +131,10 @@ ansible/
 │   └── all.yml             # Global variables
 ├── roles/
 │   ├── common/             # Base system setup
-│   ├── nodejs/             # Node.js installation
+│   ├── openclaw_vendor_base/ # Vendored upstream baseline (Node.js + pnpm, Tailscale; optional Docker/firewall)
 │   ├── openclaw/           # OpenClaw installation
 │   ├── onepassword/        # 1Password CLI setup
-│   ├── firewall/           # UFW configuration
-│   └── tailscale/          # Tailscale VPN setup
+│   └── firewall/           # UFW configuration
 ├── molecule/
 │   └── default/            # Molecule test scenario
 ├── site.yml                # Main playbook
@@ -145,8 +144,9 @@ ansible/
 
 ## Roles
 
+- **openclaw_vendor_base**: Vendored upstream baseline (Node.js + pnpm, Tailscale; optional Docker/firewall)
 - **common**: Base system packages, timezone, locale
-- **nodejs**: Node.js 20.x from NodeSource
+- **firewall**: UFW lockdown + OpenClaw port
 - **openclaw**: OpenClaw npm installation and configuration
 - **onepassword**: 1Password CLI for secrets management
 
@@ -196,7 +196,7 @@ molecule test
 
 # Tailscale
 
-tailscale_auth_key: "{{ lookup('onepassword', 'Tailscale Auth Key', field='credential', vault='OpenClaw-Secrets') }}"
+tailscale_authkey: "{{ lookup('onepassword', 'Tailscale Auth Key', field='credential', vault='OpenClaw-Secrets') }}"
 
 ```
 

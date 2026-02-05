@@ -110,6 +110,11 @@ if [ ! -f "ansible.cfg" ]; then
     exit 1
 fi
 
+# Ensure vendored upstream roles are discoverable.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ANSIBLE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+export ANSIBLE_ROLES_PATH="$ANSIBLE_DIR/roles:$ANSIBLE_DIR/vendor/openclaw-ansible/roles${ANSIBLE_ROLES_PATH:+:$ANSIBLE_ROLES_PATH}"
+
 # Check if inventory file exists
 if [ ! -f "$INVENTORY" ]; then
     print_error "Inventory file not found: $INVENTORY"
@@ -152,7 +157,7 @@ echo
 # Install required collections if needed
 if [ -f "requirements.yml" ]; then
     print_info "Installing Ansible Galaxy requirements..."
-    ansible-galaxy install -r requirements.yml
+    ansible-galaxy collection install -r requirements.yml
     echo
 fi
 

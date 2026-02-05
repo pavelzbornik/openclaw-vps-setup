@@ -43,7 +43,7 @@ cd ~/openclaw/ansible
 pip3 install molecule molecule-plugins[docker] ansible-lint
 
 # Install required Ansible collections
-ansible-galaxy install -r requirements.yml
+ansible-galaxy collection install -r requirements.yml
 ```
 
 ## Step 3: Setup SSH Access (3 minutes)
