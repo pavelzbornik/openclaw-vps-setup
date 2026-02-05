@@ -28,21 +28,56 @@
   environment:
     PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
     npm_config_prefix: "{{ openclaw_home }}/.npm-global"
+  register: openclaw_npm_install
+  ignore_errors: yes
   tags:
     - openclaw
     - install
 
-- name: Check if OpenClaw is installed
-  stat:
-    path: "{{ openclaw_home }}/.npm-global/bin/openclaw"
-  register: openclaw_binary
+- name: Run OpenClaw onboarding to install daemon
+  become: yes
+  become_user: "{{ openclaw_user }}"
+  shell: "{{ openclaw_home }}/.npm-global/bin/openclaw onboard --install-daemon"
+  environment:
+    PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
+  register: openclaw_onboard
+  changed_when: "'already' not in openclaw_onboard.stdout | lower"
+  ignore_errors: yes
+  when: openclaw_npm_install.rc | default(0) == 0
+  tags:
+    - openclaw
+    - install
+
+- name: Display OpenClaw npm installation status
+  debug:
+    msg: "OpenClaw npm installation: {{ 'succeeded' if openclaw_npm_install.rc | default(0) == 0 else 'failed - package may not be published or available' }}"
   tags:
     - openclaw
 
-- name: Display OpenClaw installation status
+- name: Display OpenClaw onboarding status
   debug:
-    msg: "OpenClaw binary found at {{ openclaw_home }}/.npm-global/bin/openclaw"
-  when: openclaw_binary.stat.exists
+    msg: "OpenClaw onboarding completed successfully"
+  when: openclaw_onboard is defined and openclaw_onboard.rc | default(0) == 0
+  tags:
+    - openclaw
+
+- name: Verify OpenClaw installation with doctor command (if available)
+  become: yes
+  become_user: "{{ openclaw_user }}"
+  shell: "{{ openclaw_home }}/.npm-global/bin/openclaw doctor"
+  environment:
+    PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
+  register: openclaw_doctor
+  changed_when: false
+  ignore_errors: yes
+  when: openclaw_npm_install.rc | default(0) == 0
+  tags:
+    - openclaw
+
+- name: Display OpenClaw doctor output
+  debug:
+    msg: "{{ openclaw_doctor.stdout_lines }}"
+  when: openclaw_doctor is defined and openclaw_doctor.rc | default(0) == 0
   tags:
     - openclaw
 
@@ -54,6 +89,7 @@
     group: "{{ openclaw_group }}"
     mode: '0600'
   notify: restart openclaw
+  when: openclaw_npm_install.rc | default(0) == 0
   tags:
     - openclaw
     - config

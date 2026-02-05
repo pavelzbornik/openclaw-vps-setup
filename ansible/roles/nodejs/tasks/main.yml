@@ -76,12 +76,51 @@
   tags:
     - nodejs
 
-- name: Configure npm to use user global directory
-  become: yes
-  become_user: "{{ openclaw_user }}"
-  command: npm config set prefix '{{ openclaw_home }}/.npm-global'
-  args:
-    creates: "{{ openclaw_home }}/.npmrc"
+- name: Remove npm cache directory to fix ownership issues
+  file:
+    path: "{{ openclaw_home }}/.npm"
+    state: absent
+  tags:
+    - nodejs
+
+- name: Create empty npm cache directory with proper permissions
+  file:
+    path: "{{ openclaw_home }}/.npm"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0700'
+  tags:
+    - nodejs
+
+- name: Create .ansible/tmp directory with proper permissions
+  file:
+    path: "{{ openclaw_home }}/.ansible/tmp"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0700'
+  tags:
+    - nodejs
+
+- name: Create .npmrc file directly
+  file:
+    path: "{{ openclaw_home }}/.npmrc"
+    state: touch
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0644'
+  tags:
+    - nodejs
+
+- name: Configure npm prefix in .npmrc
+  lineinfile:
+    path: "{{ openclaw_home }}/.npmrc"
+    line: "prefix={{ openclaw_home }}/.npm-global"
+    create: yes
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0644'
   tags:
     - nodejs
 

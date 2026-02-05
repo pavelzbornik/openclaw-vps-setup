@@ -41,7 +41,8 @@
         "ms-python.vscode-pylance",
         "ms-azuretools.vscode-docker",
         "streetsidesoftware.code-spell-checker",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+        "GitHub.copilot-chat"
       ],
       "settings": {
         "ansible.python.interpreterPath": "/usr/bin/python3",
@@ -65,7 +66,7 @@
   },
 
   // Run commands after container creation
-  "postCreateCommand": "bash -c 'echo Setup complete'",
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
 
   // Forward ports for testing
   "forwardPorts": [

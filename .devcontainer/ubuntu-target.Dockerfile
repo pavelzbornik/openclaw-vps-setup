@@ -12,11 +12,27 @@ RUN apt-get update \
         openssh-server \
         python3 \
         python3-apt \
+        python3-pip \
         locales \
         sudo \
         ca-certificates \
         curl \
+        wget \
         iproute2 \
+        git \
+        vim \
+        nano \
+        htop \
+        net-tools \
+        gnupg \
+        lsb-release \
+        apt-transport-https \
+        software-properties-common \
+        build-essential \
+        jq \
+        fail2ban \
+        ufw \
+        unattended-upgrades \
     && rm -rf /var/lib/apt/lists/*
 
 # Minimal sshd setup (dev-only)

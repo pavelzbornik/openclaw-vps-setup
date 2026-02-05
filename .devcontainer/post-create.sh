@@ -44,8 +44,14 @@ all:
         ansible_connection: ssh
 EOF
 
+# Detect if we need sudo for docker
+DOCKER_SUDO=""
+if ! docker ps &> /dev/null 2>&1; then
+    DOCKER_SUDO="sudo"
+fi
+
 # Find the running ubuntu-target container (Compose-managed name)
-TARGET_CONTAINER_ID=$(docker ps -q --filter label=com.docker.compose.service=ubuntu-target | head -n 1)
+TARGET_CONTAINER_ID=$($DOCKER_SUDO docker ps -q --filter label=com.docker.compose.service=ubuntu-target | head -n 1)
 if [ -z "$TARGET_CONTAINER_ID" ]; then
         print_warn "Could not find a running ubuntu-target container via Docker labels yet."
 fi
@@ -55,11 +61,11 @@ print_info "Waiting for target container to be ready..."
 max_attempts=30
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
-    if [ -n "$TARGET_CONTAINER_ID" ] && docker exec "$TARGET_CONTAINER_ID" echo "ready" &>/dev/null; then
+    if [ -n "$TARGET_CONTAINER_ID" ] && $DOCKER_SUDO docker exec "$TARGET_CONTAINER_ID" echo "ready" &>/dev/null; then
         print_info "✓ Target container is ready!"
         break
     fi
-    TARGET_CONTAINER_ID=$(docker ps -q --filter label=com.docker.compose.service=ubuntu-target | head -n 1)
+    TARGET_CONTAINER_ID=$($DOCKER_SUDO docker ps -q --filter label=com.docker.compose.service=ubuntu-target | head -n 1)
     attempt=$((attempt + 1))
     sleep 2
 done
@@ -68,28 +74,43 @@ if [ $attempt -eq $max_attempts ]; then
     print_warn "Target container is not responding yet. You may need to wait a bit longer."
 fi
 
-# Copy SSH public key to target container
+# Setup SSH access to target container
 print_info "Setting up SSH access to target container..."
-if [ -n "$TARGET_CONTAINER_ID" ]; then
-    if docker exec "$TARGET_CONTAINER_ID" test -d /root/.ssh; then
-        docker exec "$TARGET_CONTAINER_ID" mkdir -p /root/.ssh
+
+# Get the target container name
+TARGET_CONTAINER=$($DOCKER_SUDO docker ps --filter "ancestor=openclaw/ubuntu-target:24.04-systemd" --format "{{.Names}}" | head -1)
+
+if [ -z "$TARGET_CONTAINER" ]; then
+    print_warn "Could not find ubuntu-target container. SSH setup will be attempted later."
+else
+    print_info "Found target container: $TARGET_CONTAINER"
+    
+    # Ensure SSH directory exists and generate key if needed
+    if [ ! -f ~/.ssh/id_ed25519 ]; then
+        print_info "Generating SSH key..."
+        mkdir -p ~/.ssh
+        ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" -C "ansible-control"
     fi
-fi
-
-# Copy the SSH public key
-SSH_PUB_KEY=$(cat ~/.ssh/id_ed25519.pub)
-if [ -n "$TARGET_CONTAINER_ID" ]; then
-    docker exec "$TARGET_CONTAINER_ID" bash -c "mkdir -p /root/.ssh && echo '$SSH_PUB_KEY' >> /root/.ssh/authorized_keys && chmod 700 /root/.ssh && chmod 600 /root/.ssh/authorized_keys"
-else
-    print_warn "Skipping SSH key copy because ubuntu-target container was not found."
-fi
-
-# Test SSH connection
-print_info "Testing SSH connection to target container..."
-if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_ed25519 root@ubuntu-target "echo 'SSH connection successful'" &>/dev/null; then
-    print_info "✓ SSH connection to target container works!"
-else
-    print_warn "SSH connection test failed. You may need to set this up manually."
+    
+    # Get the SSH public key
+    SSH_PUB_KEY=$(cat ~/.ssh/id_ed25519.pub)
+    
+    # Add public key to root's authorized_keys on target
+    print_info "Adding public key to $TARGET_CONTAINER..."
+    $DOCKER_SUDO docker exec $TARGET_CONTAINER bash -c "
+        mkdir -p /root/.ssh
+        chmod 700 /root/.ssh
+        echo '$SSH_PUB_KEY' >> /root/.ssh/authorized_keys
+        chmod 600 /root/.ssh/authorized_keys
+    " 2>/dev/null || print_warn "Could not add SSH key to target container yet."
+    
+    # Test SSH connection
+    print_info "Testing SSH connection to target container..."
+    if ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_ed25519 root@ubuntu-target "echo 'SSH connection successful'" &>/dev/null; then
+        print_info "✓ SSH connection to target container works!"
+    else
+        print_warn "SSH connection test failed. The target container may still be starting."
+    fi
 fi
 
 # Test Ansible connectivity
@@ -100,33 +121,6 @@ else
     print_warn "Ansible ping test failed. Try running: ansible all -i inventory/test-container.yml -m ping"
 fi
 
-# Create helper scripts
-print_info "Creating helper scripts..."
-
-cat > /workspaces/openclaw/ansible/test-deploy.sh << 'TESTEOF'
-#!/bin/bash
-# Test deployment to container
-
-set -e
-
-echo "🧪 Testing Ansible deployment to container..."
-
-# Use test inventory
-INVENTORY="inventory/test-container.yml"
-
-# Test connectivity
-echo "Testing connectivity..."
-ansible all -i "$INVENTORY" -m ping
-
-# Run playbook
-echo "Running playbook..."
-ansible-playbook -i "$INVENTORY" site.yml "$@"
-
-echo "✅ Deployment test complete!"
-TESTEOF
-
-chmod +x /workspaces/openclaw/ansible/test-deploy.sh
-
 # Print completion message
 echo ""
 echo "=========================================="
@@ -135,9 +129,9 @@ echo "=========================================="
 echo ""
 echo "Available commands:"
 echo "  • Test connectivity:  ansible all -i inventory/test-container.yml -m ping"
-echo "  • Deploy to container: ./test-deploy.sh"
+echo "  • Deploy to container: ./test-deploy.sh --check  (dry-run)"
+echo "  • Deploy to container: ./test-deploy.sh         (full deployment)"
 echo "  • Run Molecule tests:  molecule test"
-echo "  • SSH to target:       ssh -i ~/.ssh/id_ed25519 root@172.25.0.10"
 echo ""
 echo "Container details:"
 echo "  • Target Host: ubuntu-target (from inside devcontainer)"
@@ -147,7 +141,7 @@ echo "  • Find ports: docker compose -f .devcontainer/docker-compose.yml port 
 echo "              docker compose -f .devcontainer/docker-compose.yml port ubuntu-target 18789"
 echo ""
 echo "Next steps:"
-echo "  1. Test connectivity: make ping INVENTORY=inventory/test-container.yml"
-echo "  2. Deploy: ./test-deploy.sh --check"
-echo "  3. Deploy for real: ./test-deploy.sh"
+echo "  1. Test connectivity: ansible all -i inventory/test-container.yml -m ping"
+echo "  2. Deploy (dry-run):  ./test-deploy.sh --check"
+echo "  3. Deploy (for real): ./test-deploy.sh"
 echo ""

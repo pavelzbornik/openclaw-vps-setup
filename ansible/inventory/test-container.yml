@@ -1,7 +1,6 @@
-# Test container inventory for DevContainer testing
 all:
   children:
-    openclaw_vms:
+    test_vms:
       hosts:
         ubuntu-target:
           ansible_host: ubuntu-target
@@ -11,3 +10,6 @@ all:
           ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
       vars:
         ansible_connection: ssh
+    openclaw_vms:
+      children:
+        test_vms:
