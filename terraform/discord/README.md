@@ -6,7 +6,7 @@ This directory contains Terraform configuration to provision and manage the Open
 
 1. **1Password Service Account**
    - Create a service account in 1Password with access to your vault
-   - Save the service account token ( )
+   - Save the service account token (starts with `ops_...`)
    - See [1Password Service Account Documentation](https://developer.1password.com/docs/service-accounts/)
 
 2. **Discord Bot Setup**
@@ -46,8 +46,6 @@ This directory contains Terraform configuration to provision and manage the Open
    echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
    sudo apt update && sudo apt install terraform
    ```
-
-## Setup
 
 ## Setup
 
@@ -254,9 +252,9 @@ terraform force-unlock <LOCK_ID>
 - Limit service account access to only required vaults and items
 
 ## Additional Resources
-Terraform 1Password Provider Docs](https://registry.terraform.io/providers/1Password/onepassword/latest/docs)
+
+- [Terraform 1Password Provider Docs](https://registry.terraform.io/providers/1Password/onepassword/latest/docs)
 - [1Password Service Accounts](https://developer.1password.com/docs/service-accounts/)
-- [
 - [Terraform Discord Provider Docs](https://registry.terraform.io/providers/Lucky3028/discord/latest/docs)
 - [Discord Developer Portal](https://discord.com/developers/docs)
 - [Terraform Documentation](https://www.terraform.io/docs)

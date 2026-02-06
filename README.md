@@ -1,6 +1,20 @@
-# OpenClaw
+# OpenClaw VPS setup
 
-Automated provisioning and deployment for OpenClaw AI agent on Hyper-V Ubuntu VMs.
+Automated provisioning and deployment for the OpenClaw AI agent on Ubuntu VPS or Hyper-V VMs.
+
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Stack](https://img.shields.io/badge/stack-ansible%20%2B%20terraform%20%2B%20tailscale-informational)
+
+## ✅ Purpose
+
+This repo packages the infrastructure and automation needed to install OpenClaw securely on a dedicated Ubuntu host.
+
+### Who This Is For
+
+- Self-hosters who want a hardened, reproducible OpenClaw deployment
+- Windows users running Hyper-V VMs
+- VPS users who prefer native installs (no Docker)
+
 
 ## 📁 Repository Structure
 
@@ -13,8 +27,13 @@ openclaw/
 │   ├── roles/                 # Ansible roles
 │   ├── molecule/              # Testing framework
 │   └── scripts/               # Deployment scripts
-└── docs/
-    └── research/              # Research and guides
+├── terraform/                 # Discord IaC (optional)
+└── docs/                      # Project guides and references
+    ├── README.md              # Docs index
+    ├── hyperv-setup.md         # Hyper-V VM checklist
+    ├── firewall.md             # Firewall and network controls
+    ├── openclaw-config-repo.md # Git sync guidance
+    └── discord-terraform.md    # Discord setup overview
 ```
 
 ## 🚀 Quick Start
@@ -41,20 +60,19 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 
 ### What This Does
 
-- ✅ Provisions Ubuntu VM with Node.js 20.x
-- ✅ Installs OpenClaw natively (no Docker)
-- ✅ Configures UFW firewall (port 18789 only from Tailscale)
-- ✅ Sets up Tailscale VPN
+- ✅ Provisions Ubuntu VM with Node.js (via the official `openclaw-ansible` submodule)
+- ✅ Installs OpenClaw natively (no Docker runtime)
+- ✅ Configures firewall via upstream role (optional)
+- ✅ Sets up Tailscale VPN (optional)
 - ✅ Installs 1Password CLI for secrets management
-- ✅ Creates systemd service for OpenClaw
-- ✅ Implements security hardening (fail2ban, auto-updates)
-- ✅ Includes Molecule testing framework
+- ✅ Syncs an OpenClaw config repo (optional)
+- ✅ Creates a systemd service for OpenClaw
+- ✅ Includes Molecule and devcontainer testing
 
 ### Prerequisites
 
-- Hyper-V VM with Ubuntu 24.04 (already created)
-- WSL2 with Ubuntu on Windows host
-- SSH access to VM
+- Ubuntu 24.04 VM or VPS with SSH access
+- WSL2 with Ubuntu on Windows host (if using Hyper-V)
 - Basic Ansible knowledge (optional)
 
 ## 📖 Documentation
@@ -65,8 +83,12 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 | [ansible/QUICKSTART.md](ansible/QUICKSTART.md) | Step-by-step deployment guide |
 | [ansible/TROUBLESHOOTING.md](ansible/TROUBLESHOOTING.md) | Problem solving guide |
 | [ansible/IMPLEMENTATION_NOTES.md](ansible/IMPLEMENTATION_NOTES.md) | Critical configuration notes |
+| [docs/README.md](docs/README.md) | Documentation index |
+| [docs/hyperv-setup.md](docs/hyperv-setup.md) | Hyper-V VM checklist |
+| [docs/firewall.md](docs/firewall.md) | Firewall and network controls |
+| [docs/openclaw-config-repo.md](docs/openclaw-config-repo.md) | Config repo sync guidance |
+| [docs/discord-terraform.md](docs/discord-terraform.md) | Discord IaC overview |
 | [docs/PRE_COMMIT_SETUP.md](docs/PRE_COMMIT_SETUP.md) | Pre-commit hooks setup and usage |
-| [docs/research/openclaw-hyperv-setup-guide.md](docs/research/openclaw-hyperv-setup-guide.md) | Original manual setup guide |
 
 ## 🔧 Common Commands
 
@@ -88,28 +110,13 @@ make logs
 make status
 ```
 
-## 📝 Research Notes
-
-The `docs/research/` directory contains detailed research on:
-
-- OpenClaw security considerations for Windows 11 home servers
-- Hyper-V VM setup and networking
-- Firewall configuration strategies
-- Discord channel provisioning
-- 1Password integration
-- Cost optimization with model routing
-
-These documents informed the Ansible implementation.
-
 ## 🔐 Security
 
 - OpenClaw runs as non-root user
-- UFW firewall with restrictive rules
-- Port 18789 only accessible via Tailscale network
+- Firewall rules applied via upstream tasks (when enabled)
+- Tailscale access available via upstream submodule tasks (when enabled)
 - SSH key-based authentication only
-- fail2ban brute-force protection
-- Automatic security updates
-- SMB/NetBIOS ports blocked
+- fail2ban and unattended upgrades when local security packages are enabled
 
 ## 🤖 About OpenClaw
 
@@ -127,12 +134,11 @@ OpenClaw is an autonomous AI personal assistant that connects messaging platform
 
 ### Ansible Roles
 
-1. **common**: Base system setup, security packages
-2. **nodejs**: Node.js 20.x from NodeSource
-3. **openclaw**: OpenClaw installation and configuration
-4. **onepassword**: 1Password CLI for secrets management
-5. **firewall**: UFW firewall with security rules
-6. **tailscale**: Tailscale mesh VPN
+1. **openclaw_vendor_base**: Wrapper that invokes the official `openclaw-ansible` submodule tasks
+2. **common**: Base system setup, security packages
+3. **onepassword**: 1Password CLI for secrets management
+4. **openclaw_git**: Config repo sync and migration
+5. **openclaw**: OpenClaw npm installation and systemd unit
 
 ### Testing
 
@@ -142,17 +148,17 @@ OpenClaw is an autonomous AI personal assistant that connects messaging platform
 
 ## 🎯 Design Decisions
 
-- **Native installation** (not Docker): Per requirements, OpenClaw runs directly on the VM
-- **Molecule testing**: Validates changes in containers before production
-- **1Password integration**: Secure secrets management without committing to git
-- **Tailscale-only access**: Gateway only accessible via VPN (100.64.0.0/10 network)
+- **Native installation** (not Docker): OpenClaw runs directly on the VM
+- **Upstream submodule**: Extend the official openclaw-ansible playbook for Node.js/Tailscale/firewall
+- **Molecule testing**: Validate playbooks in containers before production
+- **1Password integration**: Secrets management without committing to git
 - **systemd service**: Automatic startup and restart on failure
 
 ## 🚧 Known Limitations
 
 1. **OpenClaw npm package name needs verification** - Check official repo for correct package
 2. **Manual Tailscale authentication required** - Run `tailscale up` after deployment
-3. **No Docker isolation** - OpenClaw runs natively per requirements
+3. **Config files are not created automatically** - Provide `openclaw.json` and `.env` yourself
 4. See [IMPLEMENTATION_NOTES.md](ansible/IMPLEMENTATION_NOTES.md) for complete list
 
 ## 🏗️ Future Enhancements
@@ -166,15 +172,15 @@ OpenClaw is an autonomous AI personal assistant that connects messaging platform
 
 ## 📄 License
 
-See individual component licenses. This automation is provided as-is.
+MIT. See [LICENSE](LICENSE).
+
+## 🏷️ Suggested GitHub Topics
+
+openclaw, ansible, terraform, vps, ubuntu, hyperv, tailscale, 1password, firewall, molecule, devcontainer
 
 ## 🙏 Acknowledgments
 
-Based on research and documentation in `docs/research/`, including:
-
-- OpenClaw security analysis
-- Hyper-V networking strategies
-- Community best practices for AI agent deployment
+Based on community research and the official openclaw-ansible playbook used as a submodule.
 
 ---
 

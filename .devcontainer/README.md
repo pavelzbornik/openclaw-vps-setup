@@ -49,6 +49,7 @@ The post-creation script should have configured everything. Verify:
 ansible --version
 
 # Test connectivity to target container
+cd ansible
 ansible all -i inventory/test-container.yml -m ping
 
 # Expected output: ubuntu-target | SUCCESS
@@ -73,6 +74,7 @@ ansible all -i inventory/test-container.yml -m ping
 
 ```bash
 # Test connectivity
+cd ansible
 ansible all -i inventory/test-container.yml -m ping
 
 # Run playbook (dry-run)
@@ -101,6 +103,7 @@ docker exec -it $(docker ps -q --filter label=com.docker.compose.service=ubuntu-
 
 ```bash
 # Run commands
+cd ansible
 ansible all -i inventory/test-container.yml -m shell -a "systemctl status openclaw"
 
 # Check OpenClaw installation
@@ -163,6 +166,7 @@ molecule destroy     # Clean up
 
 ```bash
 # Via Ansible
+cd ansible
 ansible all -i inventory/test-container.yml -m shell -a "journalctl -u openclaw -f"
 
 # Direct container access
@@ -172,12 +176,14 @@ docker exec $(docker ps -q --filter label=com.docker.compose.service=ubuntu-targ
 ### Check Service Status
 
 ```bash
+cd ansible
 ansible all -i inventory/test-container.yml -m shell -a "systemctl status openclaw"
 ```
 
 ### Restart OpenClaw
 
 ```bash
+cd ansible
 ansible all -i inventory/test-container.yml -m shell -a "systemctl restart openclaw"
 ```
 
@@ -200,6 +206,7 @@ bash post-create.sh
 
 ```bash
 # Only install Node.js
+cd ansible
 ansible-playbook -i inventory/test-container.yml site.yml --tags nodejs
 
 # Only configure firewall
@@ -216,12 +223,12 @@ ansible-playbook -i inventory/test-container.yml site.yml --tags "nodejs,opencla
 | **OS** | Ubuntu 24.04 container | Ubuntu 24.04 VM |
 | **Host** | `ubuntu-target` (Docker DNS) | 192.168.100.10 |
 | **User** | root (for testing) | openclaw |
-| **UFW** | Disabled (container limitation) | Enabled |
-| **Tailscale** | Disabled (not needed) | Enabled |
+| **UFW** | Optional (disable `vendor_firewall_enabled` if it fails) | Enabled when configured |
+| **Tailscale** | Optional (disable `vendor_tailscale_enabled` if it fails) | Enabled when configured |
 | **systemd** | Full support | Full support |
 | **Isolation** | Container isolation | VM isolation |
 
-**Note**: UFW firewall is disabled in the test container because it doesn't work properly in Docker. This is fine for testing the Ansible logic, but remember that UFW **will** be enabled on your real VM.
+**Note**: In containers, upstream firewall and Tailscale tasks may fail or be unnecessary. For devcontainer testing, it is common to disable `vendor_firewall_enabled` and `vendor_tailscale_enabled` in `group_vars/all.yml`.
 
 ## Troubleshooting
 
@@ -255,6 +262,7 @@ ssh -i ~/.ssh/id_ed25519 root@ubuntu-target
 ping ubuntu-target
 
 # Check inventory
+cd ansible
 cat inventory/test-container.yml
 
 # Test with verbose output

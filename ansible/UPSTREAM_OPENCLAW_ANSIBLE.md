@@ -1,15 +1,15 @@
-# Upstream Ansible Reuse (openclaw/openclaw-ansible)
+# Official Ansible Submodule (openclaw/openclaw-ansible)
 
 This repo originally implemented a full OpenClaw VM provisioning playbook under `ansible/`.
-There is also an upstream installer playbook at <https://github.com/openclaw/openclaw-ansible>.
+The official installer playbook lives at <https://github.com/openclaw/openclaw-ansible>.
 
-To avoid reinventing the wheel (and to make it easy to track upstream improvements), this workspace vendors the upstream repo as a git submodule:
+To avoid reinventing the wheel (and to make it easy to track upstream improvements), this workspace includes the official playbook as a git submodule:
 
 - `ansible/vendor/openclaw-ansible`
 
 ## What’s reused today
 
-This workspace uses the vendored upstream tasks as the baseline via the `openclaw_vendor_base` role:
+This workspace uses the upstream submodule tasks as the baseline via the `openclaw_vendor_base` role:
 
 - Node.js + pnpm install via `clawdbot:nodejs`
 - Tailscale install via `clawdbot:tailscale`

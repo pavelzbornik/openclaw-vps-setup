@@ -64,18 +64,18 @@ Common issues and solutions when deploying OpenClaw with Ansible.
 
 ### "Package 'nodejs' has no installation candidate"
 
-**Problem**: NodeSource repository not properly configured
+**Problem**: NodeSource repository not properly configured by the upstream base tasks
 
 **Solutions**:
 
 1. Manually configure NodeSource (on VM):
 
    ```bash
-   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
    sudo apt update
    ```
 
-2. Re-run nodejs role:
+2. Re-run the upstream submodule Node.js tasks:
 
    ```bash
    make deploy TAGS=nodejs
@@ -139,16 +139,23 @@ Common issues and solutions when deploying OpenClaw with Ansible.
 
 ### "UFW command failed"
 
-**Problem**: UFW not available in test container
+**Problem**: UFW not available in test container or upstream firewall tasks require Docker
 
 **Solutions**:
 
-1. For Molecule tests, UFW is disabled by default (see `molecule/default/molecule.yml`)
+1. For Molecule tests, UFW may be disabled by default (see `molecule/default/molecule.yml`)
 
 2. For VM deployment, ensure UFW is installed:
 
    ```bash
    ssh openclaw@192.168.100.10 "sudo apt install -y ufw"
+   ```
+
+3. If using upstream firewall tasks, confirm Docker is enabled:
+
+   ```yaml
+   vendor_firewall_enabled: true
+   vendor_docker_enabled: true
    ```
 
 ### "Port 18789 not accessible"

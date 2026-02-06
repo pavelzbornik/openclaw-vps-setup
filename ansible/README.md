@@ -6,11 +6,11 @@ This directory contains Ansible playbooks and roles for automated provisioning o
 
 ### For Production Deployment
 
-- WSL2 with Ubuntu 24.04
-- Ansible 2.9+
-- Python 3.8+
-- Molecule (for testing)
+- WSL2 with Ubuntu 24.04 (Windows) or a Linux host
+- Ansible core 2.14+ (recommended)
+- Python 3.10+
 - SSH access to target VM
+- Optional: Molecule for testing
 
 ### For DevContainer Testing (Recommended)
 
@@ -33,7 +33,7 @@ Test everything in an isolated container environment without touching your PC:
 2. **Test Deployment**
 
    ```bash
-   # Everything is pre-configured!
+   # From repo root
    ./test-deploy.sh --check  # Dry-run
    ./test-deploy.sh          # Deploy to test container
    ```
@@ -62,7 +62,7 @@ sudo apt install -y ansible
 pip3 install molecule molecule-plugins[docker] ansible-lint
 
 # Install Ansible collections
-   ansible-galaxy collection install -r requirements.yml
+ansible-galaxy collection install -r requirements.yml
 ```
 
 ### 2. Configure Inventory
@@ -131,10 +131,10 @@ ansible/
 │   └── all.yml             # Global variables
 ├── roles/
 │   ├── common/             # Base system setup
-│   ├── openclaw_vendor_base/ # Vendored upstream baseline (Node.js + pnpm, Tailscale; optional Docker/firewall)
+│   ├── openclaw_vendor_base/ # Wrapper around the official openclaw-ansible submodule
+│   ├── openclaw_git/       # Config repo sync and migration
 │   ├── openclaw/           # OpenClaw installation
-│   ├── onepassword/        # 1Password CLI setup
-│   └── firewall/           # UFW configuration
+│   └── onepassword/        # 1Password CLI setup
 ├── molecule/
 │   └── default/            # Molecule test scenario
 ├── site.yml                # Main playbook
@@ -144,11 +144,11 @@ ansible/
 
 ## Roles
 
-- **openclaw_vendor_base**: Vendored upstream baseline (Node.js + pnpm, Tailscale; optional Docker/firewall)
+- **openclaw_vendor_base**: Wrapper role that invokes tasks from the official openclaw-ansible submodule
 - **common**: Base system packages, timezone, locale
-- **firewall**: UFW lockdown + OpenClaw port
-- **openclaw**: OpenClaw npm installation and configuration
 - **onepassword**: 1Password CLI for secrets management
+- **openclaw_git**: Config repo sync and migration
+- **openclaw**: OpenClaw npm installation and systemd unit
 
 ### DevContainer Testing (Recommended)
 
@@ -189,14 +189,7 @@ molecule test
 | **Environment** | Container with systemd | Clean container per test | Real VM |
 | **Speed** | Fast (~2 min) | Medium (~5 min) | Varies |
 | **Persistence** | Keeps state | Destroyed after test | Permanent |
-| **Use Case** | Development & debugging | Validation & CI/CD | Actual deployment |_allow_ports:
-
-- { port: 22, proto: tcp, comment: "SSH" }
-- { port: 18789, proto: tcp, from: "100.64.0.0/10", comment: "OpenClaw Tailscale" }
-
-# Tailscale
-
-tailscale_authkey: "{{ lookup('onepassword', 'Tailscale Auth Key', field='credential', vault='OpenClaw-Secrets') }}"
+| **Use Case** | Development & debugging | Validation & CI/CD | Actual deployment |
 
 ```
 
@@ -235,7 +228,7 @@ molecule test
 # Update OpenClaw
 ansible-playbook site.yml --tags openclaw
 
-# Update firewall rules
+# Update upstream firewall rules (if enabled)
 ansible-playbook site.yml --tags firewall
 
 # Restart services
@@ -284,5 +277,5 @@ molecule login
 - Never commit secrets to git
 - Use ansible-vault for sensitive variables
 - 1Password service account token should be environment variable
-- UFW is configured to deny all incoming by default
-- OpenClaw port only accessible via Tailscale network
+- UFW is configured by upstream submodule tasks when `vendor_firewall_enabled` is true
+- OpenClaw port exposure depends on upstream firewall rules

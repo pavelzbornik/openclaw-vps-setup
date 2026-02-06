@@ -46,20 +46,27 @@ The pre-commit hooks run the following checks:
 - **ShellCheck**: Lints shell scripts for common errors and bad practices
 
 ### Terraform
-- **terraform fmt**: Auto-formats Terraform files
-- **terraform validate**: Validates Terraform configuration
-- **terraform docs**: Auto-generates documentation
-- **tflint**: Additional Terraform linting
-- **trivy**: Security scanning for Terraform
+
+Terraform hooks are currently disabled in `.pre-commit-config.yaml` to avoid platform-specific issues. Run these manually when needed:
+
+- `terraform fmt`
+- `terraform validate`
 
 ### Ansible
-- **ansible-lint**: Lints Ansible playbooks and roles using production profile
+
 - **yamllint**: General YAML linting
+
+`ansible-lint` is disabled in pre-commit due to dependency conflicts. Run it manually when needed:
+
+```bash
+ansible-lint site.yml
+```
 
 ### Markdown
 - **markdownlint**: Lints and auto-fixes Markdown files
 
 ### Security
+
 - **detect-secrets**: Scans for accidentally committed secrets
 - **detect-private-key**: Prevents committing private keys
 
@@ -123,6 +130,7 @@ terraform init
 
 ### ansible-lint fails
 Review the ansible-lint output. You may need to:
+
 - Fix syntax errors in YAML files
 - Add proper tags to tasks
 - Follow Ansible best practices

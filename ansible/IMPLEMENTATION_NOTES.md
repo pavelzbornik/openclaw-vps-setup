@@ -69,10 +69,10 @@ ansible/
 │   └── all.yml                      # Global configuration variables
 ├── roles/
 │   ├── common/                      # Base system setup
-│   ├── openclaw_vendor_base/        # Vendored upstream baseline (Node.js + pnpm, Tailscale; optional Docker/firewall)
-│   ├── openclaw/                    # OpenClaw installation & config
-│   ├── onepassword/                 # 1Password CLI setup
-│   └── firewall/                    # UFW firewall configuration
+│   ├── openclaw_vendor_base/        # Wrapper around the official openclaw-ansible submodule
+│   ├── openclaw_git/                # Config repo sync and migration
+│   ├── openclaw/                    # OpenClaw installation & systemd unit
+│   └── onepassword/                 # 1Password CLI setup
 ├── molecule/
 │   └── default/                     # Molecule testing framework
 ├── scripts/
@@ -99,9 +99,9 @@ ansible/
 - Sets timezone and locale
 - Creates OpenClaw user
 
-#### 2. Vendor Base (Upstream)
+#### 2. Upstream Submodule (Official)
 
-This workspace vendors <https://github.com/openclaw/openclaw-ansible> and uses it as the baseline via the `openclaw_vendor_base` role:
+This workspace includes the official playbook as a git submodule at <https://github.com/openclaw/openclaw-ansible> and extends it via the `openclaw_vendor_base` role:
 
 - Node.js + pnpm install (upstream)
 - Tailscale install (upstream)
@@ -113,8 +113,6 @@ See `ansible/UPSTREAM_OPENCLAW_ANSIBLE.md` for details.
 
 - Creates directory structure (~/.openclaw/{config,workspace,logs})
 - Installs OpenClaw via npm (⚠️ **package name needs verification**)
-- Creates configuration file (openclaw.json)
-- Creates environment file (.env)
 - Sets up systemd service
 - Configures log rotation
 
@@ -124,13 +122,12 @@ See `ansible/UPSTREAM_OPENCLAW_ANSIBLE.md` for details.
 - Tests connection to 1Password vaults
 - Enables secret lookup in playbooks
 
-#### 5. Firewall Role
+#### 5. OpenClaw Git Role
 
-- Configures UFW with deny-by-default policy
-- Opens SSH (port 22) with rate limiting
-- Opens OpenClaw Gateway (port 18789) only from Tailscale network
-- Blocks SMB/NetBIOS ports
-- Enables firewall logging
+- Clones a separate OpenClaw config repo
+- Writes a safe `.gitignore` if missing
+- Generates `openclaw.json.template` for initial setup
+- Optionally migrates workspace content
 
 ### Testing with Molecule
 
@@ -164,9 +161,9 @@ This lets you validate the playbook safely!
 ### Optional Customization
 
 - **Timezone**: Change in `group_vars/all.yml` → `timezone`
-- **Firewall Rules**: Modify in `group_vars/all.yml` → `ufw_rules`
+- **Upstream Submodule**: Enable/disable Node.js, Tailscale, Docker, firewall via `vendor_*` flags
 - **Node.js Version**: Change in `group_vars/all.yml` → `nodejs_version`
-- **OpenClaw Configuration**: Edit template in `roles/openclaw/templates/openclaw.json.j2`
+- **OpenClaw Configuration**: Edit template in `roles/openclaw/templates/openclaw.json.j2` (used for config repo template)
 
 ---
 
@@ -175,20 +172,20 @@ This lets you validate the playbook safely!
 ### What's Implemented
 
 ✅ OpenClaw runs as non-root user (`openclaw`)  
-✅ UFW firewall with restrictive rules  
+✅ UFW firewall with restrictive rules (via upstream firewall tasks when enabled)  
 ✅ SSH with key-based authentication  
 ✅ fail2ban for SSH brute-force protection  
 ✅ Automatic security updates enabled  
-✅ Port 18789 only accessible from Tailscale network  
-✅ SMB/NetBIOS ports blocked  
+✅ Port 18789 restricted by upstream firewall rules (when enabled)  
+✅ SMB/NetBIOS ports blocked (when upstream firewall is enabled)  
 ✅ systemd service hardening (NoNewPrivileges, ProtectSystem, etc.)
 
 ### What's NOT Implemented
 
-❌ **Docker isolation** (per your requirement)  
+❌ **Docker isolation**  
 
 - OpenClaw runs natively on the VM
-- If you want Docker later, see the guide in `docs/research/openclaw-hyperv-setup-guide.md`
+- Docker may still be installed by upstream baseline tasks if enabled
 
 ❌ **SSL/TLS termination**  
 

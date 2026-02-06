@@ -1,13 +1,13 @@
 # OpenClaw Ansible - Quick Start Guide
 
-This guide will get you up and running with OpenClaw on your Hyper-V Ubuntu VM in ~15 minutes.
+This guide will get you up and running with OpenClaw on your Ubuntu VM or VPS in ~15 minutes.
 
 ## Prerequisites Checklist
 
-- [ ] Ubuntu VM created and running (IP: 192.168.100.10)
+- [ ] Ubuntu VM or VPS created and running (example IP: 192.168.100.10)
 - [ ] Ubuntu user created (username: `openclaw`)
 - [ ] SSH enabled on the VM
-- [ ] WSL2 with Ubuntu installed on Windows host
+- [ ] WSL2 with Ubuntu installed on Windows host (Hyper-V only)
 - [ ] Network connectivity between WSL2 and VM
 
 ## Step 1: Install Ansible in WSL2 (5 minutes)
@@ -74,11 +74,21 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
 ```
 
-### Option B: Edit Configuration (Recommended for Production)
+### Option B: Config Repo Sync (Recommended)
 
-Edit `group_vars/all.yml` and update the `openclaw_config` section with your API keys.
+The `openclaw_git` role can clone a separate config repo. Update these in
+`group_vars/all.yml`:
 
-### Option C: Use 1Password (Advanced)
+- `openclaw_config_repo`
+- `openclaw_git_sync_enabled`
+
+If the repo exists, the role writes `openclaw.json.template` into it.
+
+### Option C: Edit Configuration Manually
+
+Edit `group_vars/all.yml` and update `openclaw_config` plus `openclaw_env_vars`.
+
+### Option D: Use 1Password (Advanced)
 
 ```bash
 export OP_SERVICE_ACCOUNT_TOKEN="ops_your_token_here"
@@ -117,13 +127,13 @@ make deploy
 Watch the output. The deployment will:
 
 1. ✓ Update system packages
-2. ✓ Install Node.js 20.x
+2. ✓ Install Node.js + pnpm (via upstream baseline)
 3. ✓ Install 1Password CLI
-4. ✓ Configure firewall (UFW)
-5. ✓ Install Tailscale
-6. ✓ Install OpenClaw via npm
-7. ✓ Create systemd service
-8. ✓ Configure OpenClaw
+4. ✓ Install Docker and configure firewall (if enabled)
+5. ✓ Install Tailscale (if enabled)
+6. ✓ Sync OpenClaw config repo (optional)
+7. ✓ Install OpenClaw via npm
+8. ✓ Create systemd service
 
 ## Step 7: Post-Deployment Configuration (3 minutes)
 
@@ -143,19 +153,20 @@ sudo tailscale up
 # Your VM will get a Tailscale IP (100.x.x.x)
 ```
 
-### Configure Secrets (if not done via 1Password)
+### Configure OpenClaw Settings
 
-Edit the environment file:
+If you are **not** using a config repo, create the files manually:
 
 ```bash
+mkdir -p ~/.openclaw/config
 nano ~/.openclaw/.env
+nano ~/.openclaw/config/openclaw.json
 ```
 
-Add your API keys:
+If you **are** using a config repo, start from the generated template:
 
-```
-ANTHROPIC_API_KEY=sk-ant-your-key
-OPENAI_API_KEY=sk-your-key
+```bash
+ls ~/openclaw-config/openclaw.json.template
 ```
 
 Save (Ctrl+O, Enter, Ctrl+X)
@@ -228,7 +239,7 @@ molecule --debug converge
 ```bash
 # Deploy specific roles
 make deploy TAGS=openclaw           # Only OpenClaw
-make deploy TAGS=firewall           # Only firewall
+make deploy TAGS=firewall           # Only upstream firewall tasks (if enabled)
 
 # View logs from VM
 make logs
@@ -256,7 +267,7 @@ make restart
 - [ ] Changed default gateway token in config
 - [ ] API keys stored securely (1Password or encrypted)
 - [ ] Tailscale authenticated
-- [ ] UFW firewall enabled (port 18789 only from Tailscale)
+- [ ] Firewall enabled (via upstream tasks if configured)
 - [ ] SSH key-based auth only (no password)
 - [ ] OpenClaw running as non-root user
 - [ ] VM snapshot created before first run
