@@ -154,29 +154,9 @@ OpenClaw is an autonomous AI personal assistant that connects messaging platform
 - **1Password integration**: Secrets management without committing to git
 - **systemd service**: Automatic startup and restart on failure
 
-## 🚧 Known Limitations
-
-1. **OpenClaw npm package name needs verification** - Check official repo for correct package
-2. **Manual Tailscale authentication required** - Run `tailscale up` after deployment
-3. **Config files are not created automatically** - Provide `openclaw.json` and `.env` yourself
-4. See [IMPLEMENTATION_NOTES.md](ansible/IMPLEMENTATION_NOTES.md) for complete list
-
-## 🏗️ Future Enhancements
-
-- Automated Tailscale authentication with auth key
-- Nginx reverse proxy with SSL/TLS
-- Monitoring with Prometheus/Grafana
-- Automated backup/restore playbooks
-- CI/CD pipeline integration
-- Multi-instance support
-
 ## 📄 License
 
 MIT. See [LICENSE](LICENSE).
-
-## 🏷️ Suggested GitHub Topics
-
-openclaw, ansible, terraform, vps, ubuntu, hyperv, tailscale, 1password, firewall, molecule, devcontainer
 
 ## 🙏 Acknowledgments
 
