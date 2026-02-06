@@ -54,6 +54,11 @@
         - secrets
         - 1password
 
+    - role: openclaw_git
+      tags:
+        - openclaw
+        - git
+
     - role: openclaw
       tags:
         - openclaw

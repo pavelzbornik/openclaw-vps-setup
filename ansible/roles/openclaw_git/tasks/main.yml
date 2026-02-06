@@ -1,0 +1,425 @@
+---
+# OpenClaw git sync + migration role
+
+- name: Ensure OpenClaw base directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0755'
+  loop:
+    - "{{ openclaw_install_dir }}"
+    - "{{ openclaw_config_dir }}"
+    - "{{ openclaw_workspace_dir }}"
+    - "{{ openclaw_logs_dir }}"
+  tags:
+    - openclaw
+    - git
+
+- name: Check for GitHub CLI
+  command: which gh
+  register: openclaw_gh_installed
+  changed_when: false
+  failed_when: false
+  tags:
+    - openclaw
+    - git
+
+- name: Read GitHub token from 1Password (if available)
+  command: >-
+    op read "op://{{ openclaw_github_token_vault }}/{{ openclaw_github_token_item }}/{{ openclaw_github_token_field }}"
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+  register: openclaw_github_token
+  changed_when: false
+  failed_when: false
+  when:
+    - openclaw_git_sync_enabled | bool
+    - openclaw_op_service_account_token | length > 0
+  tags:
+    - openclaw
+    - git
+    - 1password
+
+- name: Set GitHub token fact
+  set_fact:
+    openclaw_github_token_value: "{{ openclaw_github_token.stdout | trim }}"
+  when:
+    - openclaw_git_sync_enabled | bool
+    - openclaw_github_token is defined
+    - openclaw_github_token.rc | default(1) == 0
+  tags:
+    - openclaw
+    - git
+
+- name: Authenticate GitHub CLI for git operations
+  become: true
+  become_user: "{{ openclaw_user }}"
+  command: gh auth login --with-token
+  args:
+    stdin: "{{ openclaw_github_token_value }}"
+  when:
+    - openclaw_git_sync_enabled | bool
+    - openclaw_gh_installed.rc == 0
+    - openclaw_github_token_value is defined
+  tags:
+    - openclaw
+    - git
+
+- name: Configure git to use GitHub CLI auth
+  become: true
+  become_user: "{{ openclaw_user }}"
+  command: gh auth setup-git
+  when:
+    - openclaw_git_sync_enabled | bool
+    - openclaw_gh_installed.rc == 0
+    - openclaw_github_token_value is defined
+  tags:
+    - openclaw
+    - git
+
+- name: Reset temp repo path
+  file:
+    path: "{{ openclaw_git_tmp_dir }}"
+    state: absent
+  when: openclaw_git_sync_enabled | bool
+  tags:
+    - openclaw
+    - git
+
+- name: Clone config repo to temp for migration detection
+  git:
+    repo: "{{ openclaw_config_repo }}"
+    dest: "{{ openclaw_git_tmp_dir }}"
+    depth: 1
+    update: yes
+    force: yes
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+  register: openclaw_git_tmp_clone
+  failed_when: false
+  when: openclaw_git_sync_enabled | bool
+  tags:
+    - openclaw
+    - git
+
+- name: Check for workspace files in temp repo
+  find:
+    paths: "{{ openclaw_git_tmp_dir }}/workspace"
+    file_type: file
+  register: openclaw_git_tmp_workspace
+  failed_when: false
+  when:
+    - openclaw_git_sync_enabled | bool
+    - openclaw_git_tmp_clone is defined
+    - openclaw_git_tmp_clone.rc | default(1) == 0
+  tags:
+    - openclaw
+    - git
+
+- name: Set migration mode
+  set_fact:
+    openclaw_migration_mode: "{{ (openclaw_git_tmp_workspace.matched | default(0)) | int > 0 }}"
+  when: openclaw_git_sync_enabled | bool
+  tags:
+    - openclaw
+    - git
+
+- name: Clone config repo to destination
+  become: true
+  become_user: "{{ openclaw_user }}"
+  git:
+    repo: "{{ openclaw_config_repo }}"
+    dest: "{{ openclaw_config_repo_dest }}"
+    update: yes
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+  register: openclaw_git_dest_clone
+  failed_when: false
+  when:
+    - openclaw_git_sync_enabled | bool
+  tags:
+    - openclaw
+    - git
+
+- name: Mark repo availability
+  set_fact:
+    openclaw_git_repo_available: "{{ openclaw_git_dest_clone.rc | default(1) == 0 }}"
+  when: openclaw_git_sync_enabled | bool
+  tags:
+    - openclaw
+    - git
+
+- name: Report git sync status
+  debug:
+    msg: >-
+      Git sync status: {{ 'enabled' if openclaw_git_sync_enabled else 'disabled' }};
+      migration={{ openclaw_migration_mode | default(false) }};
+      repo={{ 'available' if openclaw_git_repo_available | default(false) else 'unavailable' }}
+  tags:
+    - openclaw
+    - git
+
+- name: Ensure repo workspace directory exists
+  file:
+    path: "{{ openclaw_config_repo_dest }}/workspace"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0755'
+  when:
+    - openclaw_git_repo_available | default(false)
+  tags:
+    - openclaw
+    - git
+
+- name: Ensure repo skills directory exists
+  file:
+    path: "{{ openclaw_config_repo_dest }}/skills"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0755'
+  when:
+    - openclaw_git_repo_available | default(false)
+  tags:
+    - openclaw
+    - git
+
+- name: Write default .gitignore for config repo
+  copy:
+    dest: "{{ openclaw_config_repo_dest }}/.gitignore"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0644'
+    force: false
+    content: |
+      # Secrets - NEVER commit these
+      credentials/
+      *.token
+      *.key
+      *.secret
+      .env
+      secrets.yml
+      openclaw.json
+
+      # Session data - contains private conversations
+      sessions/
+      *.session
+
+      # Logs - may contain sensitive info
+      logs/
+      *.log
+
+      # Memory - may contain personal information
+      MEMORY.md
+
+      # Temporary files
+      *.tmp
+      *.swp
+      *~
+      .DS_Store
+
+      # Keep directory structure
+      !credentials/.gitkeep
+      !sessions/.gitkeep
+      !logs/.gitkeep
+  when:
+    - openclaw_git_repo_available | default(false)
+  tags:
+    - openclaw
+    - git
+
+- name: Create config template in repo (new install)
+  template:
+    src: openclaw.json.j2
+    dest: "{{ openclaw_config_repo_dest }}/openclaw.json.template"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0644'
+    force: false
+  when:
+    - openclaw_git_repo_available | default(false)
+    - not (openclaw_migration_mode | default(false))
+  tags:
+    - openclaw
+    - git
+
+- name: Copy workspace from repo (migration)
+  copy:
+    src: "{{ openclaw_config_repo_dest }}/workspace/"
+    dest: "{{ openclaw_workspace_dir }}/"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0755'
+    remote_src: true
+  when:
+    - openclaw_git_repo_available | default(false)
+    - openclaw_migration_mode | default(false)
+  tags:
+    - openclaw
+    - git
+    - migration
+
+- name: Check repo skills directory
+  stat:
+    path: "{{ openclaw_config_repo_dest }}/skills"
+  register: openclaw_repo_skills
+  when:
+    - openclaw_git_repo_available | default(false)
+  tags:
+    - openclaw
+    - git
+
+- name: Copy skills from repo (migration)
+  copy:
+    src: "{{ openclaw_config_repo_dest }}/skills/"
+    dest: "{{ openclaw_install_dir }}/skills/"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0755'
+    remote_src: true
+  when:
+    - openclaw_git_repo_available | default(false)
+    - openclaw_repo_skills is defined
+    - openclaw_repo_skills.stat is defined
+    - openclaw_repo_skills.stat.exists
+    - openclaw_migration_mode | default(false)
+  tags:
+    - openclaw
+    - git
+    - migration
+
+- name: Check config template in repo
+  stat:
+    path: "{{ openclaw_config_repo_dest }}/openclaw.json.template"
+  register: openclaw_repo_template
+  when:
+    - openclaw_git_repo_available | default(false)
+  tags:
+    - openclaw
+    - git
+
+- name: Inject secrets to create openclaw.json (migration)
+  command: >-
+    op inject -i "{{ openclaw_config_repo_dest }}/openclaw.json.template" -o "{{ openclaw_install_dir }}/openclaw.json"
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+  when:
+    - openclaw_git_repo_available | default(false)
+    - openclaw_repo_template is defined
+    - openclaw_repo_template.stat is defined
+    - openclaw_repo_template.stat.exists
+    - openclaw_op_service_account_token | length > 0
+    - openclaw_migration_mode | default(false)
+  tags:
+    - openclaw
+    - git
+    - migration
+    - 1password
+
+- name: Install sync script
+  copy:
+    dest: "{{ openclaw_home }}/sync-openclaw-config.sh"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Sync OpenClaw configuration to git
+      set -e
+
+      CONFIG_REPO="{{ openclaw_config_repo_dest }}"
+      OPENCLAW_DIR="{{ openclaw_install_dir }}"
+
+      cd "$CONFIG_REPO"
+
+      git pull
+
+      echo "Backing up workspace files..."
+      rsync -av --exclude='MEMORY.md' \
+          "$OPENCLAW_DIR/workspace/" "$CONFIG_REPO/workspace/"
+
+      if [ -d "$OPENCLAW_DIR/skills" ]; then
+          echo "Backing up global skills..."
+          rsync -av "$OPENCLAW_DIR/skills/" "$CONFIG_REPO/skills/"
+      fi
+
+      if [ -f "$OPENCLAW_DIR/openclaw.json" ]; then
+          if [ ! -f "$CONFIG_REPO/openclaw.json.template" ]; then
+            echo "Config template missing; create it manually to avoid committing secrets."
+          fi
+      fi
+
+      if [ -n "$(git status --porcelain)" ]; then
+          git add .
+          git commit -m "Auto-sync: $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+          echo "Configuration synced to git"
+      else
+          echo "No changes to sync"
+      fi
+  when:
+    - openclaw_git_repo_available | default(false)
+  tags:
+    - openclaw
+    - git
+
+- name: Install systemd service for config sync
+  copy:
+    dest: /etc/systemd/system/openclaw-backup.service
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Backup OpenClaw configuration to git
+
+      [Service]
+      Type=oneshot
+      User={{ openclaw_user }}
+      WorkingDirectory={{ openclaw_config_repo_dest }}
+      ExecStart={{ openclaw_home }}/sync-openclaw-config.sh
+  when:
+    - openclaw_git_repo_available | default(false)
+  tags:
+    - openclaw
+    - git
+
+- name: Install systemd timer for config sync
+  copy:
+    dest: /etc/systemd/system/openclaw-backup.timer
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Daily OpenClaw configuration backup
+
+      [Timer]
+      OnCalendar=daily
+      OnBootSec=15min
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+  when:
+    - openclaw_git_repo_available | default(false)
+    - openclaw_git_timer_enabled | bool
+  tags:
+    - openclaw
+    - git
+
+- name: Enable config sync timer
+  systemd:
+    name: openclaw-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when:
+    - openclaw_git_repo_available | default(false)
+    - openclaw_git_timer_enabled | bool
+  tags:
+    - openclaw
+    - git
