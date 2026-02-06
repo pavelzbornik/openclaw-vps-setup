@@ -33,7 +33,3 @@ make test
 - Describe the problem and the approach.
 - Include any relevant commands or output.
 - Add or update documentation when behavior changes.
-
-## Code of Conduct
-
-This project follows the Contributor Covenant. See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
