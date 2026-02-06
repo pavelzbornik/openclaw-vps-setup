@@ -3,7 +3,7 @@
 
 - name: Update apt cache
   apt:
-    update_cache: yes
+    update_cache: true
     cache_valid_time: 3600
   tags:
     - common
@@ -12,8 +12,8 @@
 - name: Upgrade all packages to latest version
   apt:
     upgrade: dist
-    autoremove: yes
-    autoclean: yes
+    autoremove: true
+    autoclean: true
   tags:
     - common
     - packages
@@ -31,6 +31,7 @@
   apt:
     name: "{{ security_packages }}"
     state: present
+  when: not (vendor_firewall_enabled | default(false))
   tags:
     - common
     - packages
@@ -54,14 +55,48 @@
 - name: Ensure OpenClaw user exists
   user:
     name: "{{ openclaw_user }}"
-    groups: sudo
-    append: yes
+    groups: []
+    append: false
     shell: /bin/bash
-    create_home: yes
+    create_home: true
     state: present
   tags:
     - common
     - users
+
+- name: Configure scoped sudo for OpenClaw user
+  copy:
+    dest: /etc/sudoers.d/openclaw
+    mode: '0440'
+    owner: root
+    group: root
+    content: |
+      # OpenClaw sudo permissions (scoped for security)
+      # Service control - openclaw service only
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl start openclaw
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop openclaw
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart openclaw
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl status openclaw
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl enable openclaw
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl disable openclaw
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl daemon-reload
+
+      # Tailscale - diagnostics + connect/disconnect
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/tailscale status
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/tailscale up *
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/tailscale down
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/tailscale ip *
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/tailscale version
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/tailscale ping *
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/tailscale whois *
+
+      # Journal access - openclaw logs only
+      {{ openclaw_user }} ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u openclaw *
+    validate: /usr/sbin/visudo -cf %s
+  tags:
+    - common
+    - users
+    - security
 
 - name: Configure unattended-upgrades for security updates
   copy:
@@ -78,6 +113,7 @@
       Unattended-Upgrade::Remove-Unused-Dependencies "true";
       Unattended-Upgrade::Automatic-Reboot "false";
     mode: '0644'
+  when: not (vendor_firewall_enabled | default(false))
   tags:
     - common
     - security
@@ -85,8 +121,9 @@
 - name: Enable unattended-upgrades
   systemd:
     name: unattended-upgrades
-    enabled: yes
+    enabled: true
     state: started
+  when: not (vendor_firewall_enabled | default(false))
   tags:
     - common
     - security
@@ -107,6 +144,7 @@
       backend = %(sshd_backend)s
     mode: '0644'
   notify: restart fail2ban
+  when: not (vendor_firewall_enabled | default(false))
   tags:
     - common
     - security
@@ -114,8 +152,9 @@
 - name: Ensure fail2ban is enabled and started
   systemd:
     name: fail2ban
-    enabled: yes
+    enabled: true
     state: started
+  when: not (vendor_firewall_enabled | default(false))
   tags:
     - common
     - security

@@ -44,7 +44,7 @@
       lineinfile:
         path: "{{ openclaw_home }}/.npmrc"
         line: "prefix={{ openclaw_home }}/.npm-global"
-        create: yes
+        create: true
         owner: "{{ openclaw_user }}"
         group: "{{ openclaw_group }}"
         mode: '0644'
@@ -53,7 +53,7 @@
       lineinfile:
         path: "{{ openclaw_home }}/.bashrc"
         line: 'export PATH="{{ openclaw_home }}/.npm-global/bin:$PATH"'
-        create: yes
+        create: true
         owner: "{{ openclaw_user }}"
         group: "{{ openclaw_group }}"
         mode: '0644'
@@ -78,8 +78,24 @@
     - openclaw
     - directories
 
+- name: Ensure OpenClaw npm and Ansible dirs are owned by the service user
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_group }}"
+    mode: "{{ item.mode }}"
+    recurse: true
+  loop:
+    - {path: "{{ openclaw_home }}/.npm", mode: '0700'}
+    - {path: "{{ openclaw_home }}/.npm-global", mode: '0755'}
+    - {path: "{{ openclaw_home }}/.ansible", mode: '0700'}
+  tags:
+    - openclaw
+    - npm
+
 - name: Install OpenClaw via npm
-  become: yes
+  become: true
   become_user: "{{ openclaw_user }}"
   npm:
     name: "{{ openclaw_npm_package }}"
@@ -96,7 +112,7 @@
     - install
 
 - name: Run OpenClaw onboarding to install daemon
-  become: yes
+  become: true
   become_user: "{{ openclaw_user }}"
   shell: "{{ openclaw_home }}/.npm-global/bin/openclaw onboard --install-daemon"
   environment:
@@ -131,49 +147,30 @@
     - openclaw
 
 - name: Verify OpenClaw installation with doctor command (if available)
-  become: yes
+  become: true
   become_user: "{{ openclaw_user }}"
-  shell: "{{ openclaw_home }}/.npm-global/bin/openclaw doctor"
+  command: "timeout 30s {{ openclaw_home }}/.npm-global/bin/openclaw doctor"
   environment:
     PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
   register: openclaw_doctor
   changed_when: false
   ignore_errors: yes
-  when: openclaw_npm_install.rc | default(0) == 0
+  when:
+    - openclaw_npm_install.rc | default(0) == 0
+    - openclaw_run_doctor | default(false)
   tags:
     - openclaw
 
 - name: Display OpenClaw doctor output
   debug:
     msg: "{{ openclaw_doctor.stdout_lines }}"
-  when: openclaw_doctor is defined and openclaw_doctor.rc | default(0) == 0
+  when:
+    - openclaw_doctor is defined
+    - not (openclaw_doctor.skipped | default(false))
+    - openclaw_doctor.rc | default(1) == 0
+    - openclaw_doctor.stdout_lines is defined
   tags:
     - openclaw
-
-- name: Create OpenClaw configuration file
-  template:
-    src: openclaw.json.j2
-    dest: "{{ openclaw_config_dir }}/openclaw.json"
-    owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
-    mode: '0600'
-  notify: restart openclaw
-  when: openclaw_npm_install.rc | default(0) == 0
-  tags:
-    - openclaw
-    - config
-
-- name: Create OpenClaw environment file
-  template:
-    src: openclaw.env.j2
-    dest: "{{ openclaw_install_dir }}/.env"
-    owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
-    mode: '0600'
-  notify: restart openclaw
-  tags:
-    - openclaw
-    - config
 
 - name: Create systemd service file for OpenClaw
   template:
@@ -192,8 +189,8 @@
 - name: Enable OpenClaw service
   systemd:
     name: openclaw
-    enabled: yes
-    daemon_reload: yes
+    enabled: true
+    daemon_reload: true
   tags:
     - openclaw
     - systemd

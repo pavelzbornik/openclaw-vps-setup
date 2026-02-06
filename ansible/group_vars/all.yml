@@ -25,9 +25,14 @@ vendor_docker_enabled: true
 vendor_firewall_enabled: true
 
 # OpenClaw onboarding behavior
-# If true, runs `openclaw onboard --install-daemon` (may manage systemd itself).
-# If false, Ansible templates the systemd service + config files.
+# RECOMMENDED: false - Let users run `openclaw onboard --install-daemon` manually
+#   - Ansible: Creates .openclaw/ dirs and systemd service template only
+#   - User: Runs onboarding wizard to create config files with their API keys
+#   - Benefit: No pre-baked secrets in Ansible, configs follow OpenClaw defaults
 openclaw_onboard_install_daemon: false
+
+# Optional: run `openclaw doctor` after installation (can be interactive)
+openclaw_run_doctor: false
 
 # Node.js Configuration
 nodejs_version: "22.x"  # OpenClaw requires Node >=22 (NodeSource format)
@@ -44,6 +49,7 @@ tailscale_enabled: true
 # tailscale_authkey: "tskey-auth-xxxxx"
 
 # Security Packages
+# Note: Only used when vendor_firewall_enabled is false.
 security_packages:
   - fail2ban
   - ufw
@@ -54,6 +60,7 @@ security_packages:
 # Only include additional packages not covered by vendor
 base_packages:
   - python3-pip  # For Ansible modules
+  - acl  # Required for privilege escalation on Linux
 
 # OpenClaw Configuration Template Variables
 # These reference 1Password secrets
@@ -77,10 +84,8 @@ openclaw_config:
       dmPolicy: "pairing"
   models:
     providers:
-      anthropic:
-        # apiKey: "op://OpenClaw-Secrets/OpenClaw API Keys/ANTHROPIC_API_KEY"
-      openai:
-        # apiKey: "op://OpenClaw-Secrets/OpenClaw API Keys/OPENAI_API_KEY"
+      anthropic: {}  # apiKey: "op://OpenClaw-Secrets/OpenClaw API Keys/ANTHROPIC_API_KEY"
+      openai: {}  # apiKey: "op://OpenClaw-Secrets/OpenClaw API Keys/OPENAI_API_KEY"
 
 # Environment Variables for OpenClaw Service
 openclaw_env_vars:
