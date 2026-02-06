@@ -60,7 +60,10 @@ RUN mkdir -p /home/vscode/.ssh && \
     chown -R vscode:vscode /home/vscode/.ssh && \
     chmod 700 /home/vscode/.ssh && \
     chmod 600 /home/vscode/.ssh/id_ed25519 && \
-    chmod 644 /home/vscode/.ssh/id_ed25519.pub
+    chmod 644 /home/vscode/.ssh/id_ed25519.pub && \
+    mkdir -p /home/vscode/.cache && \
+    chown -R vscode:vscode /home/vscode/.cache && \
+    chmod 755 /home/vscode/.cache
 
 # Set up ansible configuration
 RUN mkdir -p /home/vscode/.ansible && \

@@ -21,12 +21,12 @@ print_warn() {
 # Install and configure pre-commit
 print_info "Installing pre-commit..."
 if ! command -v pre-commit &> /dev/null; then
-    pipx install pre-commit
-    export PATH="$HOME/.local/bin:$PATH"
+    pip install --break-system-packages pre-commit
 fi
 
 print_info "Setting up pre-commit hooks..."
 cd /workspaces/openclaw || exit 1
+
 pre-commit install --install-hooks
 pre-commit autoupdate || print_warn "Could not update pre-commit hooks (network issue?)"
 

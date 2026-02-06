@@ -4,11 +4,6 @@
   "service": "ansible-control",
   "workspaceFolder": "/workspaces/openclaw",
 
-  // Environment variables to fix Windows PTY issues
-  "remoteEnv": {
-    "TERM": "dumb"
-  },
-
   // Disable TTY to prevent ConPTY issues on Windows Insiders
   "containerEnv": {
     "TERM": "dumb"
@@ -16,6 +11,13 @@
 
   // Comment out to connect as root instead
   "remoteUser": "vscode",
+
+  // Environment variables
+  "remoteEnv": {
+    "TERM": "dumb",
+    "PRE_COMMIT_HOME": "/workspaces/openclaw/.cache/pre-commit"
+    // "OP_SERVICE_ACCOUNT_TOKEN": "${localEnv:OP_SERVICE_ACCOUNT_TOKEN}"
+  },
 
   // Features to add to the dev container
   "features": {
@@ -87,9 +89,9 @@
   // Keep container running for better performance
   "runServices": ["ansible-control", "ubuntu-target"],
 
-  // Mount the Docker socket for Docker-in-Docker
+  // Mount the Docker socket for Docker-in-Docker and local cache directories
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=openclaw-precommit-cache,target=/home/vscode/.cache/pre-commit,type=volume"
+    "source=${localWorkspaceFolder}/.cache/pre-commit,target=/workspaces/openclaw/.cache/pre-commit,type=bind,consistency=cached"
   ]
 }

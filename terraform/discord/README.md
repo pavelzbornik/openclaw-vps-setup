@@ -6,7 +6,7 @@ This directory contains Terraform configuration to provision and manage the Open
 
 1. **1Password Service Account**
    - Create a service account in 1Password with access to your vault
-   - Save the service account token (OP_SERVICE_ACCOUNT_TOKEN)
+   - Save the service account token ( )
    - See [1Password Service Account Documentation](https://developer.1password.com/docs/service-accounts/)
 
 2. **Discord Bot Setup**
