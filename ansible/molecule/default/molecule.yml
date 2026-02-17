@@ -32,7 +32,6 @@ provisioner:
       all:
         # Override variables for testing
         openclaw_user: openclaw
-        openclaw_group: openclaw
         timezone: UTC
         locale: en_US.UTF-8
         # Disable Tailscale for local testing

@@ -67,14 +67,14 @@
   post_tasks:
     - name: Verify OpenClaw installation
       stat:
-        path: "{{ openclaw_home }}/.npm-global/bin/openclaw"
+        path: "{{ openclaw_home }}/.local/bin/openclaw"
       register: openclaw_verify
       tags:
         - always
 
     - name: Display OpenClaw installation status
       debug:
-        msg: "OpenClaw successfully installed at {{ openclaw_home }}/.npm-global/bin/openclaw"
+        msg: "OpenClaw successfully installed at {{ openclaw_home }}/.local/bin/openclaw"
       when: openclaw_verify.stat.exists
       tags:
         - always

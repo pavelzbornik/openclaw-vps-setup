@@ -118,14 +118,14 @@ Common issues and solutions when deploying OpenClaw with Ansible.
 2. Check if OpenClaw binary exists:
 
    ```bash
-   ssh openclaw@192.168.100.10 "ls -la ~/.npm-global/bin/openclaw"
+   ssh openclaw@192.168.100.10 "ls -la ~/.local/bin/openclaw"
    ```
 
 3. Test OpenClaw manually:
 
    ```bash
    ssh openclaw@192.168.100.10
-   export PATH=~/.npm-global/bin:$PATH
+   export PATH=~/.local/bin:$PATH
    openclaw --help
    ```
 

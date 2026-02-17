@@ -1,44 +1,52 @@
 # Official Ansible Submodule (openclaw/openclaw-ansible)
 
-This repo originally implemented a full OpenClaw VM provisioning playbook under `ansible/`.
-The official installer playbook lives at <https://github.com/openclaw/openclaw-ansible>.
-
-To avoid reinventing the wheel (and to make it easy to track upstream improvements), this workspace includes the official playbook as a git submodule:
+This repo includes the official OpenClaw installer playbook as a git submodule:
 
 - `ansible/vendor/openclaw-ansible`
 
-## What's reused today
+Upstream is the **source of truth** for all base provisioning. Local roles only add
+deployment-specific features that upstream intentionally does not cover.
 
-This workspace uses the upstream submodule tasks as the baseline via the `openclaw_vendor_base` role:
+## What upstream provides (via `vendor_base`)
 
-- Node.js + pnpm install via `openclaw:nodejs`
-- Tailscale install via `openclaw:tailscale-linux`
-- Docker install via `openclaw:docker-linux`
-- Firewall (UFW + fail2ban + unattended-upgrades) via `openclaw:firewall-linux`
+The `openclaw_vendor_base` role selectively includes upstream task files:
 
-This is controlled by vendor-base variables in `group_vars/all.yml`:
+| Task file | What it does | Control variable |
+|---|---|---|
+| `system-tools` | System packages, vim, git config | `vendor_system_tools_enabled` |
+| `user` | User creation, sudoers, SSH keys, .bash_profile, DBus/XDG | `vendor_user_enabled` |
+| `tailscale-linux` | Tailscale VPN | `vendor_tailscale_enabled` |
+| `docker-linux` | Docker Engine | `vendor_docker_enabled` |
+| `firewall-linux` | UFW, fail2ban, unattended-upgrades | `vendor_firewall_enabled` |
+| `nodejs` | Node.js + pnpm via corepack | `vendor_nodejs_enabled` |
+| `openclaw` | pnpm dirs, pnpm install, .bashrc PATH | `vendor_openclaw_install_enabled` |
 
-- `vendor_nodejs_enabled`, `vendor_tailscale_enabled`, `vendor_docker_enabled`, `vendor_firewall_enabled`
+## What local roles add (not in upstream)
+
+| Local role | Purpose |
+|---|---|
+| `common` | apt dist-upgrade, timezone, locale, extra packages (`python3-pip`, `acl`) |
+| `onepassword` | 1Password CLI installation |
+| `openclaw_git` | Git-backed config sync, workspace/skills migration, systemd backup timer |
+| `openclaw` | Pre-baked config templates + systemd service for unattended deploys |
+
+Upstream expects users to run `openclaw onboard --install-daemon` manually.
+The local `openclaw` role pre-installs the systemd service and config files so
+the deployment is fully automated without interactive steps.
 
 ## How it works
 
-- `ansible/site.yml` runs `openclaw_vendor_base` first.
-- `openclaw_vendor_base` includes upstream role task files using `include_role: name=openclaw tasks_from=...`.
-- Scripts export `ANSIBLE_ROLES_PATH` so vendored roles are discoverable even when Ansible ignores `ansible.cfg`.
+- `ansible/site.yml` runs `openclaw_vendor_base` first, then local roles.
+- `openclaw_vendor_base` includes upstream task files using `include_role: name=openclaw tasks_from=...`.
+- `ansible.cfg` sets `roles_path = roles:vendor/openclaw-ansible/roles` so vendored roles are discoverable.
+- `deploy.sh` also exports `ANSIBLE_ROLES_PATH` for script-based runs.
 
-## Intentional differences (still local)
+## Variable alignment
 
-Some areas are intentionally kept local because upstream's goal and execution model differ:
+Local `group_vars/all.yml` uses the same variable names as upstream `defaults/main.yml`:
 
-- OpenClaw config templating (`roles/openclaw/templates/openclaw.json.j2`, `.env`, systemd unit) — upstream leaves config to `openclaw onboard`; local role pre-bakes it for unattended deploys
-- 1Password CLI integration (`roles/onepassword`) — not in upstream
-- Git sync + migration (`roles/openclaw_git`) — not in upstream
-- Security hardening choices (fail2ban, unattended-upgrades in `roles/common`) — now also covered by upstream `firewall-linux` when `vendor_firewall_enabled=true`
+- `openclaw_user`, `openclaw_home`, `openclaw_config_dir`, `openclaw_port`
+- `nodejs_version`, `openclaw_install_mode`, `openclaw_ssh_keys`
+- `tailscale_enabled`, `ci_test`
 
-## Overlap with upstream (potential simplification)
-
-The following areas are now handled by upstream and could be removed from local roles:
-
-- **User creation + sudoers** — upstream `user.yml` creates the openclaw user with scoped sudo, SSH keys, `.bash_profile`, DBus/XDG runtime. Local `common` role duplicates user creation and sudoers.
-- **fail2ban + unattended-upgrades** — upstream `firewall-linux.yml` now includes both. Local `common` role guards these with `when: not vendor_firewall_enabled`, so there is no conflict, but the local versions could be removed if `vendor_firewall_enabled` is always `true`.
-- **System packages** — upstream `system-tools-linux.yml` installs git, curl, vim, htop, build-essential, etc. Local `base_packages` only adds `python3-pip`, `acl`, `rsync` which are not in upstream.
+This means upstream defaults are overridden only where explicitly needed.
