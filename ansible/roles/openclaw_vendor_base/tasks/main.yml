@@ -15,23 +15,23 @@
 
 - name: Vendor base | Install Docker (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
-    tasks_from: docker
+    name: openclaw
+    tasks_from: docker-linux
   when: vendor_docker_enabled | default(false)
   tags:
     - docker
 
 - name: Vendor base | Configure firewall (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
-    tasks_from: firewall
+    name: openclaw
+    tasks_from: firewall-linux
   when: vendor_firewall_enabled | default(false)
   tags:
     - firewall
 
 - name: Vendor base | Install Node.js + pnpm (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
+    name: openclaw
     tasks_from: nodejs
   when: vendor_nodejs_enabled | default(true)
   tags:
@@ -39,8 +39,8 @@
 
 - name: Vendor base | Install Tailscale (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
-    tasks_from: tailscale
+    name: openclaw
+    tasks_from: tailscale-linux
   when: vendor_tailscale_enabled | default(true)
   tags:
     - tailscale
