@@ -25,7 +25,7 @@ Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{{ openclaw_uid_value 
 {% endif %}
 EnvironmentFile=-{{ openclaw_config_dir }}/.env
 
-# Start OpenClaw
+# Start OpenClaw (upstream uses `openclaw gateway` as the entry point)
 ExecStart={{ openclaw_home }}/.local/bin/openclaw gateway
 
 # Restart policy

@@ -21,6 +21,7 @@
   register: openclaw_github_token
   changed_when: false
   failed_when: false
+  no_log: true
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_op_service_account_token | length > 0
@@ -32,6 +33,7 @@
 - name: Set GitHub token fact
   set_fact:
     openclaw_github_token_value: "{{ openclaw_github_token.stdout | trim }}"
+  no_log: true
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_github_token is defined
@@ -46,6 +48,8 @@
   command: gh auth login --with-token
   args:
     stdin: "{{ openclaw_github_token_value }}"
+  no_log: true
+  changed_when: false
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_gh_installed.rc == 0
@@ -58,6 +62,7 @@
   become: true
   become_user: "{{ openclaw_user }}"
   command: gh auth setup-git
+  changed_when: false
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_gh_installed.rc == 0
@@ -293,6 +298,26 @@
     op inject -i "{{ openclaw_config_repo_dest }}/openclaw.json.template" -o "{{ openclaw_config_dir }}/openclaw.json"
   environment:
     OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+  no_log: true
+  when:
+    - openclaw_git_repo_available | default(false)
+    - openclaw_repo_template is defined
+    - openclaw_repo_template.stat is defined
+    - openclaw_repo_template.stat.exists
+    - openclaw_op_service_account_token | length > 0
+    - openclaw_migration_mode | default(false)
+  tags:
+    - openclaw
+    - git
+    - migration
+    - 1password
+
+- name: Secure injected openclaw.json permissions
+  file:
+    path: "{{ openclaw_config_dir }}/openclaw.json"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: '0600'
   when:
     - openclaw_git_repo_available | default(false)
     - openclaw_repo_template is defined

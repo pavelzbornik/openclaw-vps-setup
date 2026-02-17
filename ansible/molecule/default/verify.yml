@@ -142,13 +142,13 @@
           ========================================
           All verification checks passed!
           ========================================
-          Node.js installed
-          pnpm installed
-          OpenClaw directory structure created
-          OpenClaw systemd service configured
-          1Password CLI installed
-          fail2ban configured
-          Configuration files present
+          ✓ Node.js installed
+          ✓ pnpm installed
+          ✓ OpenClaw directory structure created
+          ✓ OpenClaw systemd service configured
+          ✓ 1Password CLI installed
+          ✓ fail2ban configured
+          ✓ Configuration files present
           ========================================
       tags:
         - verify

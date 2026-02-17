@@ -81,26 +81,24 @@ Common issues and solutions when deploying OpenClaw with Ansible.
    make deploy TAGS=nodejs
    ```
 
-### "Failed to install openclaw via npm"
+### "Failed to install openclaw via pnpm"
 
-**Problem**: npm package doesn't exist or name is wrong
+**Problem**: pnpm package doesn't exist or install fails
 
 **Solutions**:
 
-1. Check the actual package name and update `group_vars/all.yml`:
+1. Install manually as the openclaw user:
 
-   ```yaml
-   openclaw_npm_package: "@openclaw/openclaw"  # Or actual package name
+   ```bash
+   sudo su - openclaw
+   pnpm install -g openclaw@latest
    ```
 
 2. If OpenClaw isn't published to npm, install from git:
 
-   ```yaml
-   # In openclaw role tasks
-   - name: Install OpenClaw from GitHub
-     npm:
-       name: "https://github.com/openclaw/openclaw"
-       global: yes
+   ```bash
+   sudo su - openclaw
+   pnpm install -g "https://github.com/openclaw/openclaw"
    ```
 
 ### "Service failed to start"
@@ -158,7 +156,7 @@ Common issues and solutions when deploying OpenClaw with Ansible.
    vendor_docker_enabled: true
    ```
 
-### "Port 18789 not accessible"
+### "Port 3000 not accessible"
 
 **Problem**: Firewall blocking or service not listening
 
@@ -167,7 +165,7 @@ Common issues and solutions when deploying OpenClaw with Ansible.
 1. Check if service is listening:
 
    ```bash
-   ssh openclaw@192.168.100.10 "sudo ss -tulnp | grep 18789"
+   ssh openclaw@192.168.100.10 "sudo ss -tulnp | grep 3000"
    ```
 
 2. Check UFW rules:
@@ -179,7 +177,7 @@ Common issues and solutions when deploying OpenClaw with Ansible.
 3. Temporarily allow all traffic for testing:
 
    ```bash
-   ssh openclaw@192.168.100.10 "sudo ufw allow 18789/tcp"
+   ssh openclaw@192.168.100.10 "sudo ufw allow 3000/tcp"
    ```
 
 4. Check Tailscale connectivity:
@@ -390,7 +388,7 @@ Common issues and solutions when deploying OpenClaw with Ansible.
    ssh openclaw@192.168.100.10 "sudo systemctl stop openclaw"
 
    # Uninstall OpenClaw
-   ssh openclaw@192.168.100.10 "npm uninstall -g @openclaw/openclaw"
+   ssh openclaw@192.168.100.10 "pnpm remove -g openclaw"
    ```
 
 ### "Start fresh"

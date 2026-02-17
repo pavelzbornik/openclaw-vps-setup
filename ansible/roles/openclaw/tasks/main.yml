@@ -108,7 +108,7 @@
           create 0640 {{ openclaw_user }} {{ openclaw_user }}
           sharedscripts
           postrotate
-              systemctl reload openclaw > /dev/null 2>&1 || true
+              systemctl restart openclaw > /dev/null 2>&1 || true
           endscript
       }
     mode: '0644'

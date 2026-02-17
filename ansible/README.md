@@ -148,7 +148,7 @@ ansible/
 - **common**: Base system packages, timezone, locale
 - **onepassword**: 1Password CLI for secrets management
 - **openclaw_git**: Config repo sync and migration
-- **openclaw**: OpenClaw npm installation and systemd unit
+- **openclaw**: OpenClaw config templating and systemd unit for unattended deploys
 
 ### DevContainer Testing (Recommended)
 
