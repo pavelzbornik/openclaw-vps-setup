@@ -51,10 +51,8 @@ ansible/
 #### 1. Common Role
 
 - Updates system packages
-- Installs base utilities (git, curl, vim, htop, etc.)
-- Configures security packages (fail2ban, unattended-upgrades)
+- Installs extra packages (python3-pip, acl)
 - Sets timezone and locale
-- Creates OpenClaw user
 
 #### 2. Upstream Submodule (Official)
 
@@ -68,10 +66,10 @@ See `ansible/UPSTREAM_OPENCLAW_ANSIBLE.md` for details.
 
 #### 3. OpenClaw Role
 
-- Creates directory structure (~/.openclaw/{config,workspace,logs})
-- Installs OpenClaw via npm (⚠️ **package name needs verification**)
+- Deploys configuration templates (openclaw.json, .env)
 - Sets up systemd service
 - Configures log rotation
+- Optional onboarding and doctor commands
 
 #### 4. 1Password Role
 
@@ -205,11 +203,7 @@ make status       # Check service
 
 ### Limitations
 
-1. **OpenClaw npm package name unknown**
-   - Needs verification from official repo
-   - May need alternative installation method
-
-2. **No Docker isolation**
+1. **No Docker isolation**
    - OpenClaw runs directly on VM
    - Trade-off for simpler setup per requirements
 
@@ -253,7 +247,7 @@ make deploy TAGS=openclaw
 
 # Or manually on VM
 ssh openclaw@192.168.100.10
-npm update -g @openclaw/openclaw
+pnpm update -g openclaw@latest
 sudo systemctl restart openclaw
 ```
 
@@ -315,7 +309,7 @@ Before running deployment:
 - [ ] Connectivity test passed (`make ping`)
 - [ ] Inventory file updated with correct IP
 - [ ] Secrets configured (environment vars or 1Password)
-- [ ] OpenClaw npm package name verified
+- [ ] OpenClaw pnpm package verified
 - [ ] VM snapshot created (optional but recommended)
 - [ ] Molecule tests passed (optional)
 

@@ -27,6 +27,8 @@ provisioner:
     defaults:
       interpreter_python: auto_silent
       callback_whitelist: profile_tasks, timer, yaml
+  env:
+    OPENCLAW_GATEWAY_TOKEN: "molecule-test-token-not-for-production"
   inventory:
     group_vars:
       all:

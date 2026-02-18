@@ -118,6 +118,15 @@
     - openclaw
     - git
 
+- name: Cleanup temp clone
+  file:
+    path: "{{ openclaw_git_tmp_dir }}"
+    state: absent
+  when: openclaw_git_sync_enabled | bool
+  tags:
+    - openclaw
+    - git
+
 - name: Clone config repo to destination
   become: true
   become_user: "{{ openclaw_user }}"
@@ -347,7 +356,7 @@
 
       cd "$CONFIG_REPO"
 
-      git pull
+      git pull --rebase || { echo "ERROR: git pull failed — resolve conflicts manually"; exit 1; }
 
       echo "Backing up workspace files..."
       rsync -av --exclude='MEMORY.md' \

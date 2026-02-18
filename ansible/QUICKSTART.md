@@ -132,7 +132,7 @@ Watch the output. The deployment will:
 4. ✓ Install Docker and configure firewall (if enabled)
 5. ✓ Install Tailscale (if enabled)
 6. ✓ Sync OpenClaw config repo (optional)
-7. ✓ Install OpenClaw via npm
+7. ✓ Install OpenClaw via pnpm (upstream)
 8. ✓ Create systemd service
 
 ## Step 7: Post-Deployment Configuration (3 minutes)

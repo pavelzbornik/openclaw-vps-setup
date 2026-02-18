@@ -61,6 +61,7 @@
       stat:
         path: /home/openclaw/.local/bin/openclaw
       register: openclaw_bin
+      failed_when: not openclaw_bin.stat.exists
       tags:
         - verify
 
