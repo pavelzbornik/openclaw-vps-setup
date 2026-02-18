@@ -1,0 +1,24 @@
+# ansible-lint configuration for openclaw-vps-setup
+# See https://ansible.readthedocs.io/projects/lint/configuring/
+
+# Profile: basic strikes a balance between strictness and practicality
+# for an infrastructure project with upstream vendor code
+profile: basic
+
+# Exclude vendor submodule — upstream code is not ours to fix
+exclude_paths:
+  - vendor/
+  - .cache/
+  - molecule/
+
+# Rules to skip across the whole project
+skip_list:
+  # Handled by yamllint in pre-commit instead
+  - yaml[line-length]
+  # upstream submodule may use older-style includes
+  - deprecated-command-syntax
+
+# Downgrade to warnings (won't fail CI)
+warn_list:
+  - experimental
+  - name[casing]

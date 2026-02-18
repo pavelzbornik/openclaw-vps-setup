@@ -1,0 +1,105 @@
+---
+# CI/CD pipeline for openclaw-vps-setup
+# Jobs run sequentially: pre-commit → ansible-lint → molecule (Ansible validation)
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. Pre-commit ────────────────────────────────────────────────────────────
+  pre-commit:
+    name: Pre-commit checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run pre-commit hooks
+        uses: pre-commit/action@v3.0.1
+
+  # ── 2. Ansible lint ──────────────────────────────────────────────────────────
+  ansible-lint:
+    name: Ansible lint
+    runs-on: ubuntu-latest
+    needs: pre-commit
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Ansible and ansible-lint
+        run: pip install --upgrade ansible ansible-lint
+
+      - name: Install Ansible Galaxy collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Run ansible-lint
+        working-directory: ansible
+        run: ansible-lint site.yml
+
+  # ── 3. Molecule (Ansible functional validation) ──────────────────────────────
+  molecule:
+    name: Molecule tests
+    runs-on: ubuntu-latest
+    needs: ansible-lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade \
+            ansible \
+            "molecule>=24.0" \
+            "molecule-plugins[docker]" \
+            ansible-lint \
+            docker
+
+      - name: Install Ansible Galaxy collections
+        working-directory: ansible
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Run Molecule tests
+        working-directory: ansible
+        run: molecule test
+        env:
+          PY_COLORS: '1'
+          ANSIBLE_FORCE_COLOR: '1'
+          # Override gateway token for CI; molecule.yml already sets a test value
+          # but this allows repo admins to pin a specific test token via secrets
+          OPENCLAW_GATEWAY_TOKEN: ${{ secrets.OPENCLAW_GATEWAY_TOKEN || 'ci-test-token-not-for-production' }}
