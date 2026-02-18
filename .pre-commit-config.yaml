@@ -58,14 +58,16 @@ repos:
   #       args:
   #         - --args=--severity=HIGH,CRITICAL
 
-  # Ansible linting (disabled due to dependency conflicts - run manually)
-  # - repo: https://github.com/ansible/ansible-lint
-  #   rev: v24.2.0
-  #   hooks:
-  #     - id: ansible-lint
-  #       files: \.(yaml|yml)$
-  #       entry: ansible-lint
-  #       args: ['--profile=production']
+  # Ansible linting — uses system ansible-lint (installed by CI or `make install`)
+  - repo: local
+    hooks:
+      - id: ansible-lint
+        name: Ansible lint
+        language: system
+        entry: ansible-lint
+        args: ['ansible/site.yml']
+        files: ^ansible/.*\.(yaml|yml)$
+        pass_filenames: false
 
   # YAML linting (for non-Ansible YAML files)
   - repo: https://github.com/adrienverge/yamllint

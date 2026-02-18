@@ -32,7 +32,7 @@
 - name: Run OpenClaw onboarding to install daemon
   become: true
   become_user: "{{ openclaw_user }}"
-  shell: "{{ openclaw_home }}/.local/bin/openclaw onboard --install-daemon"
+  command: "{{ openclaw_home }}/.local/bin/openclaw onboard --install-daemon"
   environment:
     PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
     PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
