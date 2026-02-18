@@ -1,21 +1,8 @@
 ---
 # OpenClaw git sync + migration role
-
-- name: Ensure OpenClaw base directories exist
-  file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
-    mode: '0755'
-  loop:
-    - "{{ openclaw_install_dir }}"
-    - "{{ openclaw_config_dir }}"
-    - "{{ openclaw_workspace_dir }}"
-    - "{{ openclaw_logs_dir }}"
-  tags:
-    - openclaw
-    - git
+#
+# Directory structure (~/.openclaw/) is created by upstream via vendor_base.
+# This role handles: git repo clone, workspace/skills migration, sync script.
 
 - name: Check for GitHub CLI
   command: which gh
@@ -34,6 +21,7 @@
   register: openclaw_github_token
   changed_when: false
   failed_when: false
+  no_log: true
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_op_service_account_token | length > 0
@@ -45,6 +33,7 @@
 - name: Set GitHub token fact
   set_fact:
     openclaw_github_token_value: "{{ openclaw_github_token.stdout | trim }}"
+  no_log: true
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_github_token is defined
@@ -59,6 +48,8 @@
   command: gh auth login --with-token
   args:
     stdin: "{{ openclaw_github_token_value }}"
+  no_log: true
+  changed_when: false
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_gh_installed.rc == 0
@@ -71,6 +62,7 @@
   become: true
   become_user: "{{ openclaw_user }}"
   command: gh auth setup-git
+  changed_when: false
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_gh_installed.rc == 0
@@ -126,6 +118,15 @@
     - openclaw
     - git
 
+- name: Cleanup temp clone
+  file:
+    path: "{{ openclaw_git_tmp_dir }}"
+    state: absent
+  when: openclaw_git_sync_enabled | bool
+  tags:
+    - openclaw
+    - git
+
 - name: Clone config repo to destination
   become: true
   become_user: "{{ openclaw_user }}"
@@ -166,7 +167,7 @@
     path: "{{ openclaw_config_repo_dest }}/workspace"
     state: directory
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
+    group: "{{ openclaw_user }}"
     mode: '0755'
   when:
     - openclaw_git_repo_available | default(false)
@@ -179,7 +180,7 @@
     path: "{{ openclaw_config_repo_dest }}/skills"
     state: directory
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
+    group: "{{ openclaw_user }}"
     mode: '0755'
   when:
     - openclaw_git_repo_available | default(false)
@@ -191,7 +192,7 @@
   copy:
     dest: "{{ openclaw_config_repo_dest }}/.gitignore"
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
+    group: "{{ openclaw_user }}"
     mode: '0644'
     force: false
     content: |
@@ -236,7 +237,7 @@
     src: openclaw.json.j2
     dest: "{{ openclaw_config_repo_dest }}/openclaw.json.template"
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
+    group: "{{ openclaw_user }}"
     mode: '0644'
     force: false
   when:
@@ -249,10 +250,11 @@
 - name: Copy workspace from repo (migration)
   copy:
     src: "{{ openclaw_config_repo_dest }}/workspace/"
-    dest: "{{ openclaw_workspace_dir }}/"
+    dest: "{{ openclaw_config_dir }}/workspace/"
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
-    mode: '0755'
+    group: "{{ openclaw_user }}"
+    mode: preserve
+    directory_mode: '0755'
     remote_src: true
   when:
     - openclaw_git_repo_available | default(false)
@@ -275,10 +277,11 @@
 - name: Copy skills from repo (migration)
   copy:
     src: "{{ openclaw_config_repo_dest }}/skills/"
-    dest: "{{ openclaw_install_dir }}/skills/"
+    dest: "{{ openclaw_config_dir }}/skills/"
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
-    mode: '0755'
+    group: "{{ openclaw_user }}"
+    mode: preserve
+    directory_mode: '0755'
     remote_src: true
   when:
     - openclaw_git_repo_available | default(false)
@@ -303,9 +306,29 @@
 
 - name: Inject secrets to create openclaw.json (migration)
   command: >-
-    op inject -i "{{ openclaw_config_repo_dest }}/openclaw.json.template" -o "{{ openclaw_install_dir }}/openclaw.json"
+    op inject -i "{{ openclaw_config_repo_dest }}/openclaw.json.template" -o "{{ openclaw_config_dir }}/openclaw.json"
   environment:
     OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+  no_log: true
+  when:
+    - openclaw_git_repo_available | default(false)
+    - openclaw_repo_template is defined
+    - openclaw_repo_template.stat is defined
+    - openclaw_repo_template.stat.exists
+    - openclaw_op_service_account_token | length > 0
+    - openclaw_migration_mode | default(false)
+  tags:
+    - openclaw
+    - git
+    - migration
+    - 1password
+
+- name: Secure injected openclaw.json permissions
+  file:
+    path: "{{ openclaw_config_dir }}/openclaw.json"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: '0600'
   when:
     - openclaw_git_repo_available | default(false)
     - openclaw_repo_template is defined
@@ -323,7 +346,7 @@
   copy:
     dest: "{{ openclaw_home }}/sync-openclaw-config.sh"
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
+    group: "{{ openclaw_user }}"
     mode: '0755'
     content: |
       #!/bin/bash
@@ -331,11 +354,11 @@
       set -e
 
       CONFIG_REPO="{{ openclaw_config_repo_dest }}"
-      OPENCLAW_DIR="{{ openclaw_install_dir }}"
+      OPENCLAW_DIR="{{ openclaw_config_dir }}"
 
       cd "$CONFIG_REPO"
 
-      git pull
+      git pull --rebase || { echo "ERROR: git pull failed — resolve conflicts manually"; exit 1; }
 
       echo "Backing up workspace files..."
       rsync -av --exclude='MEMORY.md' \
@@ -381,6 +404,7 @@
       User={{ openclaw_user }}
       WorkingDirectory={{ openclaw_config_repo_dest }}
       ExecStart={{ openclaw_home }}/sync-openclaw-config.sh
+      TimeoutStartSec=300
   when:
     - openclaw_git_repo_available | default(false)
   tags:

@@ -22,17 +22,17 @@
       tags:
         - verify
 
-    - name: Check if npm is installed
-      command: npm --version
-      register: npm_check
+    - name: Check if pnpm is installed
+      command: pnpm --version
+      register: pnpm_check
       changed_when: false
-      failed_when: npm_check.rc != 0
+      failed_when: pnpm_check.rc != 0
       tags:
         - verify
 
-    - name: Display npm version
+    - name: Display pnpm version
       debug:
-        msg: "npm version: {{ npm_check.stdout }}"
+        msg: "pnpm version: {{ pnpm_check.stdout }}"
       tags:
         - verify
 
@@ -44,22 +44,25 @@
       tags:
         - verify
 
-    - name: Verify OpenClaw directory structure
+    - name: Verify OpenClaw directory structure (upstream layout)
       stat:
         path: "{{ item }}"
       register: openclaw_dirs
       failed_when: not openclaw_dirs.stat.exists
       loop:
-        - /home/openclaw/.openclaw/config
-        - /home/openclaw/.openclaw/workspace
+        - /home/openclaw/.openclaw/sessions
+        - /home/openclaw/.openclaw/credentials
+        - /home/openclaw/.openclaw/data
         - /home/openclaw/.openclaw/logs
+        - /home/openclaw/.openclaw/workspace
       tags:
         - verify
 
     - name: Check if OpenClaw binary exists
       stat:
-        path: /home/openclaw/.npm-global/bin/openclaw
+        path: /home/openclaw/.local/bin/openclaw
       register: openclaw_bin
+      failed_when: not openclaw_bin.stat.exists
       tags:
         - verify
 
@@ -121,7 +124,7 @@
 
     - name: Verify OpenClaw configuration file exists
       stat:
-        path: /home/openclaw/.openclaw/config/openclaw.json
+        path: /home/openclaw/.openclaw/openclaw.json
       register: openclaw_config
       failed_when: not openclaw_config.stat.exists
       tags:
@@ -142,7 +145,7 @@
           All verification checks passed!
           ========================================
           ✓ Node.js installed
-          ✓ npm installed
+          ✓ pnpm installed
           ✓ OpenClaw directory structure created
           ✓ OpenClaw systemd service configured
           ✓ 1Password CLI installed

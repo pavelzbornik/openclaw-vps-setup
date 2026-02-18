@@ -5,95 +5,84 @@
 timezone: "UTC"
 locale: "en_US.UTF-8"
 
-# OpenClaw Configuration
-openclaw_user: openclaw
-openclaw_group: openclaw
-openclaw_home: "/home/{{ openclaw_user }}"
-openclaw_install_dir: "{{ openclaw_home }}/.openclaw"
-openclaw_config_dir: "{{ openclaw_install_dir }}/config"
-openclaw_workspace_dir: "{{ openclaw_install_dir }}/workspace"
-openclaw_logs_dir: "{{ openclaw_install_dir }}/logs"
-openclaw_port: 18789
-openclaw_npm_package: "openclaw"  # Official package from npm registry
-openclaw_version: "latest"
+# ─── Upstream-aligned variables ──────────────────────────────────────
+# These match upstream openclaw-ansible defaults/main.yml.
+# Only override when your deployment needs differ from upstream defaults.
 
-# Vendor base controls (recommended approach)
-# These drive the `openclaw_vendor_base` role which reuses upstream task files.
+openclaw_user: openclaw
+openclaw_home: "/home/{{ openclaw_user }}"
+openclaw_config_dir: "{{ openclaw_home }}/.openclaw"
+openclaw_port: 3000
+
+# Node.js version (upstream default: 22.x)
+nodejs_version: "22.x"
+
+# Installation mode: 'release' (pnpm install -g) or 'development' (git clone)
+openclaw_install_mode: "release"
+
+# SSH keys for the openclaw user (upstream variable)
+# openclaw_ssh_keys:
+#   - "ssh-ed25519 AAAA... user@host"
+openclaw_ssh_keys: []
+
+# ─── Vendor base controls ───────────────────────────────────────────
+# These drive the openclaw_vendor_base role which reuses upstream task files.
+vendor_system_tools_enabled: true
+vendor_user_enabled: true
 vendor_nodejs_enabled: true
 vendor_tailscale_enabled: true
 vendor_docker_enabled: true
 vendor_firewall_enabled: true
+vendor_openclaw_install_enabled: true
+
+# Tailscale (upstream variable — set to true to install)
+tailscale_enabled: true
+# tailscale_authkey: "tskey-auth-xxxxx"
+
+# CI test mode — skips systemd/Docker tasks (upstream variable)
+ci_test: false
+
+# ─── Local extensions (not in upstream) ──────────────────────────────
+
+# Extra packages not covered by upstream system-tools
+extra_packages:
+  - python3-pip
+  - acl
 
 # OpenClaw onboarding behavior
-# RECOMMENDED: false - Let users run `openclaw onboard --install-daemon` manually
-#   - Ansible: Creates .openclaw/ dirs and systemd service template only
-#   - User: Runs onboarding wizard to create config files with their API keys
-#   - Benefit: No pre-baked secrets in Ansible, configs follow OpenClaw defaults
 openclaw_onboard_install_daemon: false
-
-# Optional: run `openclaw doctor` after installation (can be interactive)
 openclaw_run_doctor: false
-
-# Node.js Configuration
-nodejs_version: "22.x"  # OpenClaw requires Node >=22 (NodeSource format)
 
 # 1Password Configuration
 onepassword_cli_version: "latest"
 onepassword_cli_deb_url: "https://downloads.1password.com/linux/debian/amd64/stable/1password-cli-amd64-latest.deb"
-# Service account token should be set as environment variable: OP_SERVICE_ACCOUNT_TOKEN
-# or encrypted with ansible-vault in a separate file
 
-# Tailscale Configuration
-tailscale_enabled: true
-# Optional: auth key for unattended setup (upstream var name)
-# tailscale_authkey: "tskey-auth-xxxxx"
-
-# Security Packages
-# Note: Only used when vendor_firewall_enabled is false.
-security_packages:
-  - fail2ban
-  - ufw
-  - unattended-upgrades
-
-# Base System Packages
-# Note: Vendor handles most base packages (git, curl, wget, vim, htop, nano, etc.)
-# Only include additional packages not covered by vendor
-base_packages:
-  - python3-pip  # For Ansible modules
-  - acl  # Required for privilege escalation on Linux
-  - rsync  # Required for git sync script
-
-# OpenClaw Configuration Template Variables
-# These reference 1Password secrets
+# OpenClaw Configuration Template Variables (for unattended deploys)
 openclaw_config:
   agent:
     model: "anthropic/claude-opus-4"
   gateway:
+    # bind 0.0.0.0 — restrict access via Tailscale or firewall rules, not here
     bind: "0.0.0.0"
     port: "{{ openclaw_port }}"
     auth:
       mode: "token"
-      token: "{{ lookup('env', 'OPENCLAW_GATEWAY_TOKEN') | default('change-me-in-production', true) }}"
+      token: "{{ lookup('env', 'OPENCLAW_GATEWAY_TOKEN') | mandatory }}"
   channels:
     telegram:
       enabled: false
-      # token: "op://OpenClaw-Secrets/OpenClaw API Keys/TELEGRAM_BOT_TOKEN"
       dmPolicy: "pairing"
     discord:
       enabled: false
-      # token: "op://OpenClaw-Secrets/OpenClaw API Keys/DISCORD_BOT_TOKEN"
       dmPolicy: "pairing"
   models:
     providers:
-      anthropic: {}  # apiKey: "op://OpenClaw-Secrets/OpenClaw API Keys/ANTHROPIC_API_KEY"
-      openai: {}  # apiKey: "op://OpenClaw-Secrets/OpenClaw API Keys/OPENAI_API_KEY"
+      anthropic: {}
+      openai: {}
 
 # Environment Variables for OpenClaw Service
 openclaw_env_vars:
   NODE_ENV: "production"
-  # Secrets should be injected via 1Password or environment
-  # ANTHROPIC_API_KEY: ""
-  # OPENAI_API_KEY: ""
 
 # Git sync / migration configuration
 openclaw_git_sync_enabled: true

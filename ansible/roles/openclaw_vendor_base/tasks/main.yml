@@ -1,8 +1,10 @@
 ---
 # Base provisioning using vendored openclaw/openclaw-ansible tasks.
 #
-# This role intentionally reuses upstream task files (nodejs/tailscale and
-# optionally docker+firewall) while keeping OpenClaw-specific setup in local roles.
+# Upstream is the source of truth for: system packages, user creation,
+# Docker, firewall/security, Node.js+pnpm, Tailscale, and OpenClaw install.
+# Local roles only add what upstream doesn't cover (1Password, git sync,
+# config templating for unattended deploys).
 
 - name: Vendor base | Assert firewall implies docker
   ansible.builtin.fail:
@@ -13,34 +15,60 @@
     - vendor_firewall_enabled | default(false)
     - not (vendor_docker_enabled | default(false))
 
+- name: Vendor base | Install system tools (upstream)
+  ansible.builtin.include_role:
+    name: openclaw
+    tasks_from: system-tools
+  when: vendor_system_tools_enabled | default(true)
+  tags:
+    - system
+    - packages
+
+- name: Vendor base | Install Tailscale (upstream)
+  ansible.builtin.include_role:
+    name: openclaw
+    tasks_from: tailscale-linux
+  when: vendor_tailscale_enabled | default(true)
+  tags:
+    - tailscale
+
+- name: Vendor base | Create user + sudoers + SSH keys (upstream)
+  ansible.builtin.include_role:
+    name: openclaw
+    tasks_from: user
+  when: vendor_user_enabled | default(true)
+  tags:
+    - user
+
 - name: Vendor base | Install Docker (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
-    tasks_from: docker
+    name: openclaw
+    tasks_from: docker-linux
   when: vendor_docker_enabled | default(false)
   tags:
     - docker
 
 - name: Vendor base | Configure firewall (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
-    tasks_from: firewall
+    name: openclaw
+    tasks_from: firewall-linux
   when: vendor_firewall_enabled | default(false)
   tags:
     - firewall
 
 - name: Vendor base | Install Node.js + pnpm (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
+    name: openclaw
     tasks_from: nodejs
   when: vendor_nodejs_enabled | default(true)
   tags:
     - nodejs
 
-- name: Vendor base | Install Tailscale (upstream)
+- name: Vendor base | Install OpenClaw via pnpm + create dirs (upstream)
   ansible.builtin.include_role:
-    name: clawdbot
-    tasks_from: tailscale
-  when: vendor_tailscale_enabled | default(true)
+    name: openclaw
+    tasks_from: openclaw
+  when: vendor_openclaw_install_enabled | default(true)
   tags:
-    - tailscale
+    - openclaw
+    - install

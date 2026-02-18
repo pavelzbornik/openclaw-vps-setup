@@ -2,58 +2,15 @@
 
 ## 🚨 Critical Configuration Required
 
-### 1. OpenClaw NPM Package Name
+### 1. OpenClaw Installation
 
-**The actual OpenClaw npm package name needs to be verified!**
+OpenClaw is installed via **pnpm** (upstream default) using `pnpm install -g openclaw@latest`.
+The installation is handled by the upstream `openclaw` role task, delegated through `vendor_base`.
 
-Currently configured as: `openclaw` (in `group_vars/all.yml`)
+The installation mode is controlled by `openclaw_install_mode` in `group_vars/all.yml`:
 
-**To find the correct package:**
-
-1. Check the official OpenClaw repository: <https://github.com/openclaw/openclaw>
-2. Look for `package.json` to find the published package name
-3. Or check npm registry: <https://www.npmjs.com/search?q=openclaw>
-
-**Update the package name in:**
-
-- `ansible/group_vars/all.yml` → `openclaw_npm_package` variable
-
-**Alternative Installation Methods:**
-
-If OpenClaw is not published to npm, you have options:
-
-#### Option A: Install from GitHub
-
-```yaml
-# In roles/openclaw/tasks/main.yml
-- name: Install OpenClaw from GitHub
-  npm:
-    name: "https://github.com/openclaw/openclaw"
-    global: yes
-```
-
-#### Option B: Clone and Build
-
-```yaml
-- name: Clone OpenClaw repository
-  git:
-    repo: https://github.com/openclaw/openclaw.git
-    dest: "/opt/openclaw"
-    version: main
-
-- name: Install dependencies
-  npm:
-    path: "/opt/openclaw"
-
-- name: Build OpenClaw
-  command: npm run build
-  args:
-    chdir: "/opt/openclaw"
-```
-
-#### Option C: Docker (Not Implemented Yet)
-
-Since your requirement was native installation without Docker isolation, this isn't implemented. However, the guide shows how to add Docker support later.
+- `release` (default): `pnpm install -g openclaw@latest`
+- `development`: Git clone + `pnpm build` + link globally
 
 ---
 
@@ -94,10 +51,8 @@ ansible/
 #### 1. Common Role
 
 - Updates system packages
-- Installs base utilities (git, curl, vim, htop, etc.)
-- Configures security packages (fail2ban, unattended-upgrades)
+- Installs extra packages (python3-pip, acl)
 - Sets timezone and locale
-- Creates OpenClaw user
 
 #### 2. Upstream Submodule (Official)
 
@@ -111,10 +66,10 @@ See `ansible/UPSTREAM_OPENCLAW_ANSIBLE.md` for details.
 
 #### 3. OpenClaw Role
 
-- Creates directory structure (~/.openclaw/{config,workspace,logs})
-- Installs OpenClaw via npm (⚠️ **package name needs verification**)
+- Deploys configuration templates (openclaw.json, .env)
 - Sets up systemd service
 - Configures log rotation
+- Optional onboarding and doctor commands
 
 #### 4. 1Password Role
 
@@ -148,15 +103,13 @@ This lets you validate the playbook safely!
 
 1. **VM IP Address**: Update `inventory/hosts.yml` if not using 192.168.100.10
 
-2. **OpenClaw Package**: Update `group_vars/all.yml` → `openclaw_npm_package`
-
-3. **Secrets**: Choose one approach:
+2. **Secrets**: Choose one approach:
    - Environment variables
    - Edit `group_vars/all.yml`
    - Use 1Password (set `OP_SERVICE_ACCOUNT_TOKEN`)
    - Use ansible-vault: `ansible-vault encrypt secrets.yml`
 
-4. **Gateway Token**: Generate a secure token for OpenClaw Gateway authentication
+3. **Gateway Token**: Set `OPENCLAW_GATEWAY_TOKEN` env var (mandatory, no default)
 
 ### Optional Customization
 
@@ -176,7 +129,7 @@ This lets you validate the playbook safely!
 ✅ SSH with key-based authentication  
 ✅ fail2ban for SSH brute-force protection  
 ✅ Automatic security updates enabled  
-✅ Port 18789 restricted by upstream firewall rules (when enabled)  
+✅ Port 3000 restricted by upstream firewall rules (when enabled)  
 ✅ SMB/NetBIOS ports blocked (when upstream firewall is enabled)  
 ✅ systemd service hardening (NoNewPrivileges, ProtectSystem, etc.)
 
@@ -190,7 +143,7 @@ This lets you validate the playbook safely!
 ❌ **SSL/TLS termination**  
 
 - No Nginx reverse proxy
-- Direct connection to OpenClaw on port 18789
+- Direct connection to OpenClaw on port 3000
 - Add Nginx later if needed
 
 ❌ **Auto-rotation of secrets**  
@@ -250,19 +203,15 @@ make status       # Check service
 
 ### Limitations
 
-1. **OpenClaw npm package name unknown**
-   - Needs verification from official repo
-   - May need alternative installation method
-
-2. **No Docker isolation**
+1. **No Docker isolation**
    - OpenClaw runs directly on VM
    - Trade-off for simpler setup per requirements
 
-3. **Manual Tailscale authentication**
+2. **Manual Tailscale authentication**
    - Requires SSH to VM and running `tailscale up`
    - Could be automated with auth key
 
-4. **Static secrets**
+3. **Static secrets**
    - Secrets in files or environment variables
    - 1Password integration partially implemented
 
@@ -298,7 +247,7 @@ make deploy TAGS=openclaw
 
 # Or manually on VM
 ssh openclaw@192.168.100.10
-npm update -g @openclaw/openclaw
+pnpm update -g openclaw@latest
 sudo systemctl restart openclaw
 ```
 
@@ -360,7 +309,7 @@ Before running deployment:
 - [ ] Connectivity test passed (`make ping`)
 - [ ] Inventory file updated with correct IP
 - [ ] Secrets configured (environment vars or 1Password)
-- [ ] OpenClaw npm package name verified
+- [ ] OpenClaw pnpm package verified
 - [ ] VM snapshot created (optional but recommended)
 - [ ] Molecule tests passed (optional)
 

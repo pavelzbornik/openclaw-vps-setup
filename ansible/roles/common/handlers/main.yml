@@ -1,7 +1,3 @@
 ---
 # Handlers for common role
-
-- name: restart fail2ban
-  systemd:
-    name: fail2ban
-    state: restarted
+# (fail2ban handler removed — upstream firewall-linux handles fail2ban)

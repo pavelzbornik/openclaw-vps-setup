@@ -1,163 +1,62 @@
 ---
-# OpenClaw role: Install and configure OpenClaw
+# OpenClaw local role: config templating + systemd service for unattended deploys.
+#
+# Upstream (via vendor_base) handles: user creation, pnpm dirs, pnpm install,
+# .bashrc PATH, .openclaw/ directory structure.
+# This role only adds what upstream doesn't: pre-baked config files, systemd
+# service, logrotate, and optional onboard/doctor commands.
 
-- name: Ensure npm global prefix is configured for OpenClaw user
-  block:
-    - name: Create npm global directory for user
-      file:
-        path: "{{ openclaw_home }}/.npm-global"
-        state: directory
-        owner: "{{ openclaw_user }}"
-        group: "{{ openclaw_group }}"
-        mode: '0755'
-
-    - name: Remove npm cache directory to fix ownership issues
-      file:
-        path: "{{ openclaw_home }}/.npm"
-        state: absent
-
-    - name: Create empty npm cache directory with proper permissions
-      file:
-        path: "{{ openclaw_home }}/.npm"
-        state: directory
-        owner: "{{ openclaw_user }}"
-        group: "{{ openclaw_group }}"
-        mode: '0700'
-
-    - name: Create .ansible/tmp directory with proper permissions
-      file:
-        path: "{{ openclaw_home }}/.ansible/tmp"
-        state: directory
-        owner: "{{ openclaw_user }}"
-        group: "{{ openclaw_group }}"
-        mode: '0700'
-
-    - name: Ensure .npmrc exists
-      file:
-        path: "{{ openclaw_home }}/.npmrc"
-        state: touch
-        owner: "{{ openclaw_user }}"
-        group: "{{ openclaw_group }}"
-        mode: '0644'
-
-    - name: Configure npm prefix in .npmrc
-      lineinfile:
-        path: "{{ openclaw_home }}/.npmrc"
-        line: "prefix={{ openclaw_home }}/.npm-global"
-        create: true
-        owner: "{{ openclaw_user }}"
-        group: "{{ openclaw_group }}"
-        mode: '0644'
-
-    - name: Add npm global bin to PATH in .bashrc
-      lineinfile:
-        path: "{{ openclaw_home }}/.bashrc"
-        line: 'export PATH="{{ openclaw_home }}/.npm-global/bin:$PATH"'
-        create: true
-        owner: "{{ openclaw_user }}"
-        group: "{{ openclaw_group }}"
-        mode: '0644'
-  tags:
-    - openclaw
-    - nodejs
-    - npm
-
-- name: Create OpenClaw directory structure
-  file:
-    path: "{{ item }}"
-    state: directory
+- name: Deploy OpenClaw environment file
+  template:
+    src: openclaw.env.j2
+    dest: "{{ openclaw_config_dir }}/.env"
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
-    mode: '0755'
-  loop:
-    - "{{ openclaw_install_dir }}"
-    - "{{ openclaw_config_dir }}"
-    - "{{ openclaw_workspace_dir }}"
-    - "{{ openclaw_logs_dir }}"
+    group: "{{ openclaw_user }}"
+    mode: '0600'
   tags:
     - openclaw
-    - directories
+    - config
 
-- name: Ensure OpenClaw npm and Ansible dirs are owned by the service user
-  file:
-    path: "{{ item.path }}"
-    state: directory
+- name: Deploy OpenClaw configuration template
+  template:
+    src: openclaw.json.j2
+    dest: "{{ openclaw_config_dir }}/openclaw.json"
     owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_group }}"
-    mode: "{{ item.mode }}"
-    recurse: true
-  loop:
-    - {path: "{{ openclaw_home }}/.npm", mode: '0700'}
-    - {path: "{{ openclaw_home }}/.npm-global", mode: '0755'}
-    - {path: "{{ openclaw_home }}/.ansible", mode: '0700'}
+    group: "{{ openclaw_user }}"
+    mode: '0600'
+    force: false
   tags:
     - openclaw
-    - npm
-
-- name: Install OpenClaw via npm
-  become: true
-  become_user: "{{ openclaw_user }}"
-  npm:
-    name: "{{ openclaw_npm_package }}"
-    global: yes
-    state: "{{ 'latest' if openclaw_version == 'latest' else 'present' }}"
-    version: "{{ omit if openclaw_version == 'latest' else openclaw_version }}"
-  environment:
-    PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
-    npm_config_prefix: "{{ openclaw_home }}/.npm-global"
-  register: openclaw_npm_install
-  ignore_errors: yes
-  tags:
-    - openclaw
-    - install
+    - config
 
 - name: Run OpenClaw onboarding to install daemon
   become: true
   become_user: "{{ openclaw_user }}"
-  shell: "{{ openclaw_home }}/.npm-global/bin/openclaw onboard --install-daemon"
+  shell: "{{ openclaw_home }}/.local/bin/openclaw onboard --install-daemon"
   environment:
-    PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
+    PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
+    PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
+    HOME: "{{ openclaw_home }}"
   register: openclaw_onboard
   changed_when: "'already' not in openclaw_onboard.stdout | lower"
-  ignore_errors: yes
-  when:
-    - openclaw_npm_install.rc | default(0) == 0
-    - openclaw_onboard_install_daemon | default(false)
+  ignore_errors: true
+  when: openclaw_onboard_install_daemon | default(false)
   tags:
     - openclaw
     - install
 
-- name: Display OpenClaw npm installation status
-  debug:
-    msg: >
-      OpenClaw npm installation:
-      {{ 'succeeded' if openclaw_npm_install.rc | default(0) == 0
-         else 'failed - package may not be published or available' }}
-  tags:
-    - openclaw
-
-- name: Display OpenClaw onboarding status
-  debug:
-    msg: "OpenClaw onboarding completed successfully"
-  when:
-    - openclaw_onboard is defined
-    - not (openclaw_onboard.skipped | default(false))
-    - openclaw_onboard.rc | default(0) == 0
-  tags:
-    - openclaw
-
-- name: Verify OpenClaw installation with doctor command (if available)
+- name: Verify OpenClaw installation with doctor command
   become: true
   become_user: "{{ openclaw_user }}"
-  command: "timeout 30s {{ openclaw_home }}/.npm-global/bin/openclaw doctor"
+  command: "timeout 30s {{ openclaw_home }}/.local/bin/openclaw doctor"
   environment:
-    PATH: "{{ openclaw_home }}/.npm-global/bin:{{ ansible_env.PATH }}"
+    PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
+    PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
+    HOME: "{{ openclaw_home }}"
   register: openclaw_doctor
   changed_when: false
-  ignore_errors: yes
-  when:
-    - openclaw_npm_install.rc | default(0) == 0
-    - openclaw_run_doctor | default(false)
+  ignore_errors: true
+  when: openclaw_run_doctor | default(false)
   tags:
     - openclaw
 
@@ -199,18 +98,15 @@
   copy:
     dest: /etc/logrotate.d/openclaw
     content: |
-      {{ openclaw_logs_dir }}/*.log {
+      {{ openclaw_config_dir }}/logs/*.log {
           daily
           missingok
           rotate 14
           compress
           delaycompress
           notifempty
-          create 0640 {{ openclaw_user }} {{ openclaw_group }}
-          sharedscripts
-          postrotate
-              systemctl reload openclaw > /dev/null 2>&1 || true
-          endscript
+          copytruncate
+          create 0640 {{ openclaw_user }} {{ openclaw_user }}
       }
     mode: '0644'
   tags:

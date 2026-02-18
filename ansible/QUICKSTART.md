@@ -132,7 +132,7 @@ Watch the output. The deployment will:
 4. ✓ Install Docker and configure firewall (if enabled)
 5. ✓ Install Tailscale (if enabled)
 6. ✓ Sync OpenClaw config repo (optional)
-7. ✓ Install OpenClaw via npm
+7. ✓ Install OpenClaw via pnpm (upstream)
 8. ✓ Create systemd service
 
 ## Step 7: Post-Deployment Configuration (3 minutes)
@@ -189,7 +189,7 @@ sudo journalctl -u openclaw -f
 From your main machine (connected to Tailscale):
 
 1. Get the VM's Tailscale IP: `ssh openclaw@192.168.100.10 "tailscale ip -4"`
-2. Open browser: `http://<tailscale-ip>:18789`
+2. Open browser: `http://<tailscale-ip>:3000`
 3. You should see the OpenClaw Gateway dashboard
 
 ## Troubleshooting
@@ -214,11 +214,11 @@ ssh openclaw@192.168.100.10 "sudo journalctl -u openclaw -n 50"
 ssh openclaw@192.168.100.10 "which openclaw"
 ```
 
-### Port 18789 not accessible
+### Port 3000 not accessible
 
 ```bash
 # Check if service is listening
-ssh openclaw@192.168.100.10 "sudo ss -tulnp | grep 18789"
+ssh openclaw@192.168.100.10 "sudo ss -tulnp | grep 3000"
 
 # Check firewall
 ssh openclaw@192.168.100.10 "sudo ufw status"

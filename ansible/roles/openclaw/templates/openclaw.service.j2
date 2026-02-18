@@ -1,38 +1,44 @@
 [Unit]
 Description=OpenClaw AI Agent Gateway
 Documentation=https://github.com/openclaw/openclaw
-After=network-online.target
-{% if tailscale_enabled %}
+After=network-online.target docker.service
+{% if tailscale_enabled | default(false) %}
 After=tailscaled.service
 {% endif %}
 Wants=network-online.target
+Requires=docker.service
 
 [Service]
 Type=simple
 User={{ openclaw_user }}
-Group={{ openclaw_group }}
-WorkingDirectory={{ openclaw_install_dir }}
+Group={{ openclaw_user }}
+WorkingDirectory={{ openclaw_home }}
 
-# Environment
+# Environment — aligned with upstream pnpm paths
 Environment="NODE_ENV=production"
-Environment="PATH={{ openclaw_home }}/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-EnvironmentFile={{ openclaw_install_dir }}/.env
+Environment="PNPM_HOME={{ openclaw_home }}/.local/share/pnpm"
+Environment="PATH={{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
+Environment="HOME={{ openclaw_home }}"
+{% if openclaw_uid_value is defined %}
+Environment="XDG_RUNTIME_DIR=/run/user/{{ openclaw_uid_value }}"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{{ openclaw_uid_value }}/bus"
+{% endif %}
+EnvironmentFile=-{{ openclaw_config_dir }}/.env
 
-# Start OpenClaw
-ExecStart={{ openclaw_home }}/.npm-global/bin/openclaw start
+# Start OpenClaw (upstream uses `openclaw gateway` as the entry point)
+ExecStart={{ openclaw_home }}/.local/bin/openclaw gateway
 
 # Restart policy
-Restart=on-failure
-RestartSec=10s
+Restart=always
+RestartSec=10
 
-# Security hardening
+# Security hardening (aligned with upstream openclaw-host.service.j2)
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths={{ openclaw_install_dir }}
-ReadWritePaths={{ openclaw_workspace_dir }}
-ReadWritePaths={{ openclaw_logs_dir }}
+ReadWritePaths={{ openclaw_config_dir }}
+ReadWritePaths={{ openclaw_home }}/.local
 
 # Logging
 StandardOutput=journal
