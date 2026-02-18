@@ -3,7 +3,7 @@
 
 - name: Check if 1Password CLI is already installed
   command: which op
-  register: op_installed
+  register: onepassword_op_installed
   changed_when: false
   failed_when: false
   tags:
@@ -14,7 +14,7 @@
     url: "{{ onepassword_cli_deb_url }}"
     dest: /tmp/1password-cli.deb
     mode: '0644'
-  when: op_installed.rc != 0
+  when: onepassword_op_installed.rc != 0
   tags:
     - onepassword
 
@@ -22,20 +22,20 @@
   apt:
     deb: /tmp/1password-cli.deb
     state: present
-  when: op_installed.rc != 0
+  when: onepassword_op_installed.rc != 0
   tags:
     - onepassword
 
 - name: Verify 1Password CLI installation
   command: op --version
-  register: op_version
+  register: onepassword_op_version
   changed_when: false
   tags:
     - onepassword
 
 - name: Display 1Password CLI version
   debug:
-    msg: "1Password CLI version: {{ op_version.stdout }}"
+    msg: "1Password CLI version: {{ onepassword_op_version.stdout }}"
   tags:
     - onepassword
 
@@ -50,7 +50,7 @@
   command: op vault list
   environment:
     OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
-  register: op_vaults
+  register: onepassword_op_vaults
   changed_when: false
   failed_when: false
   when: lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') != ''
@@ -59,9 +59,9 @@
 
 - name: Display available vaults
   debug:
-    msg: "{{ op_vaults.stdout_lines }}"
+    msg: "{{ onepassword_op_vaults.stdout_lines }}"
   when:
     - lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') != ''
-    - op_vaults.rc == 0
+    - onepassword_op_vaults.rc == 0
   tags:
     - onepassword

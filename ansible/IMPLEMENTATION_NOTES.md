@@ -28,7 +28,7 @@ ansible/
 │   ├── common/                      # Base system setup
 │   ├── openclaw_vendor_base/        # Wrapper around the official openclaw-ansible submodule
 │   ├── openclaw_git/                # Config repo sync and migration
-│   ├── openclaw/                    # OpenClaw installation & systemd unit
+│   ├── openclaw_app/                # OpenClaw installation & systemd unit
 │   └── onepassword/                 # 1Password CLI setup
 ├── molecule/
 │   └── default/                     # Molecule testing framework
@@ -116,7 +116,7 @@ This lets you validate the playbook safely!
 - **Timezone**: Change in `group_vars/all.yml` → `timezone`
 - **Upstream Submodule**: Enable/disable Node.js, Tailscale, Docker, firewall via `vendor_*` flags
 - **Node.js Version**: Change in `group_vars/all.yml` → `nodejs_version`
-- **OpenClaw Configuration**: Edit template in `roles/openclaw/templates/openclaw.json.j2` (used for config repo template)
+- **OpenClaw Configuration**: Edit template in `roles/openclaw_app/templates/openclaw.json.j2` (used for config repo template)
 
 ---
 
@@ -222,7 +222,7 @@ make status       # Check service
 - [ ] Implement SSL/TLS with Let's Encrypt
 - [ ] Add monitoring role (Prometheus/Grafana)
 - [ ] Create backup/restore playbooks
-- [ ] Add CI/CD pipeline integration
+- [x] Add CI/CD pipeline integration
 - [ ] Support multiple OpenClaw instances
 - [ ] Add Discord/Telegram channel provisioning
 - [ ] Integrate with Home Assistant

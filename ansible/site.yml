@@ -59,7 +59,7 @@
         - openclaw
         - git
 
-    - role: openclaw
+    - role: openclaw_app
       tags:
         - openclaw
         - app

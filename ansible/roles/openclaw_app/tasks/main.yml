@@ -32,15 +32,15 @@
 - name: Run OpenClaw onboarding to install daemon
   become: true
   become_user: "{{ openclaw_user }}"
-  shell: "{{ openclaw_home }}/.local/bin/openclaw onboard --install-daemon"
+  command: "{{ openclaw_home }}/.local/bin/openclaw onboard --install-daemon"
   environment:
     PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
     PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
     HOME: "{{ openclaw_home }}"
-  register: openclaw_onboard
-  changed_when: "'already' not in openclaw_onboard.stdout | lower"
+  register: openclaw_app_onboard
+  changed_when: "'already' not in openclaw_app_onboard.stdout | lower"
   ignore_errors: true
-  when: openclaw_onboard_install_daemon | default(false)
+  when: openclaw_app_onboard_install_daemon | default(false)
   tags:
     - openclaw
     - install
@@ -53,7 +53,7 @@
     PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
     PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
     HOME: "{{ openclaw_home }}"
-  register: openclaw_doctor
+  register: openclaw_app_doctor
   changed_when: false
   ignore_errors: true
   when: openclaw_run_doctor | default(false)
@@ -62,12 +62,12 @@
 
 - name: Display OpenClaw doctor output
   debug:
-    msg: "{{ openclaw_doctor.stdout_lines }}"
+    msg: "{{ openclaw_app_doctor.stdout_lines }}"
   when:
-    - openclaw_doctor is defined
-    - not (openclaw_doctor.skipped | default(false))
-    - openclaw_doctor.rc | default(1) == 0
-    - openclaw_doctor.stdout_lines is defined
+    - openclaw_app_doctor is defined
+    - not (openclaw_app_doctor.skipped | default(false))
+    - openclaw_app_doctor.rc | default(1) == 0
+    - openclaw_app_doctor.stdout_lines is defined
   tags:
     - openclaw
 
@@ -79,8 +79,8 @@
     group: root
     mode: '0644'
   notify:
-    - reload systemd
-    - restart openclaw
+    - Reload systemd
+    - Restart openclaw
   tags:
     - openclaw
     - systemd

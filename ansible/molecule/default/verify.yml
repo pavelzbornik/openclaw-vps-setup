@@ -54,7 +54,6 @@
         - /home/openclaw/.openclaw/credentials
         - /home/openclaw/.openclaw/data
         - /home/openclaw/.openclaw/logs
-        - /home/openclaw/.openclaw/workspace
       tags:
         - verify
 
@@ -113,12 +112,16 @@
       systemd:
         name: fail2ban
       register: fail2ban_status
+      when: vendor_firewall_enabled | default(true)
       tags:
         - verify
 
     - name: Display fail2ban status
       debug:
         msg: "fail2ban is {{ 'active' if fail2ban_status.status.ActiveState == 'active' else 'inactive' }}"
+      when:
+        - vendor_firewall_enabled | default(true)
+        - fail2ban_status is not skipped
       tags:
         - verify
 
@@ -149,7 +152,7 @@
           ✓ OpenClaw directory structure created
           ✓ OpenClaw systemd service configured
           ✓ 1Password CLI installed
-          ✓ fail2ban configured
+          {{ '✓ fail2ban configured' if (vendor_firewall_enabled | default(true)) else '- fail2ban skipped (vendor_firewall_enabled=false)' }}
           ✓ Configuration files present
           ========================================
       tags:

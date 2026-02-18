@@ -1,0 +1,24 @@
+# ansible-lint configuration for openclaw-vps-setup
+# See https://ansible.readthedocs.io/projects/lint/configuring/
+
+# basic profile: balanced strictness for an infra project
+profile: basic
+
+# Exclude vendor submodule (upstream code) and test/cache dirs
+# Paths are relative to the repo root (where this config lives)
+exclude_paths:
+  - ansible/vendor/
+  - .cache/
+  - ansible/molecule/
+
+# Rules to skip project-wide
+skip_list:
+  # yamllint already enforces line length via pre-commit
+  - yaml[line-length]
+  # upstream submodule may use older-style includes
+  - deprecated-command-syntax
+
+# Downgrade to warnings (won't fail CI)
+warn_list:
+  - experimental
+  - name[casing]
