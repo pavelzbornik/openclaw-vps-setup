@@ -133,6 +133,16 @@ else
     print_warn "Ansible ping test failed. Try running: ansible all -i inventory/test-container.yml -m ping"
 fi
 
+# Intstall Claude Code CLI
+print_info "Installing Claude Code CLI..."
+if ! command -v claude &> /dev/null; then
+    curl -fsSL https://claude.ai/install.sh | bash
+else
+    print_info "Claude Code CLI is already installed."
+fi
+
+
+
 # Print completion message
 echo ""
 echo "=========================================="
