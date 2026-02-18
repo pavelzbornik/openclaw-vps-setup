@@ -1,9 +1,8 @@
 ---
 # CI/CD pipeline for openclaw-vps-setup
-# Jobs run sequentially: pre-commit → ansible-lint → molecule (Ansible validation)
+# Jobs run sequentially: pre-commit → molecule (Ansible validation)
 #
-# ansible-lint is run both inside the pre-commit hook (language: system) and as a
-# dedicated job so violations show up clearly in the PR checks UI.
+# ansible-lint is covered by the pre-commit hook (language: system).
 
 name: CI
 
@@ -56,42 +55,11 @@ jobs:
       - name: Run pre-commit hooks
         uses: pre-commit/action@v3.0.1
 
-  # ── 2. Ansible lint ──────────────────────────────────────────────────────────
-  ansible-lint:
-    name: Ansible lint
-    runs-on: ubuntu-latest
-    needs: pre-commit
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install ansible-lint
-        run: |
-          pip install \
-            "ansible-lint==${{ env.ANSIBLE_LINT_VERSION }}" \
-            "ansible-core==${{ env.ANSIBLE_CORE_VERSION }}"
-
-      - name: Install Ansible Galaxy collections
-        working-directory: ansible
-        run: ansible-galaxy collection install -r requirements.yml
-
-      - name: Run ansible-lint
-        working-directory: ansible
-        run: ansible-lint site.yml
-
-  # ── 3. Molecule (Ansible functional validation) ──────────────────────────────
+  # ── 2. Molecule (Ansible functional validation) ──────────────────────────────
   molecule:
     name: Molecule tests
     runs-on: ubuntu-latest
-    needs: ansible-lint
+    needs: pre-commit
 
     steps:
       - name: Checkout code
