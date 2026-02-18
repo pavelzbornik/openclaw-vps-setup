@@ -5,10 +5,11 @@
 profile: basic
 
 # Exclude vendor submodule (upstream code) and test/cache dirs
+# Paths are relative to the repo root (where this config lives)
 exclude_paths:
-  - vendor/
+  - ansible/vendor/
   - .cache/
-  - molecule/
+  - ansible/molecule/
 
 # Rules to skip project-wide
 skip_list:
