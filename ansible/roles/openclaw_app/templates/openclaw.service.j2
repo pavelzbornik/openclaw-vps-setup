@@ -1,12 +1,15 @@
 [Unit]
 Description=OpenClaw AI Agent Gateway
 Documentation=https://github.com/openclaw/openclaw
-After=network-online.target docker.service
+After=network-online.target
+{% if vendor_docker_enabled | default(true) %}
+After=docker.service
+Wants=docker.service
+{% endif %}
 {% if tailscale_enabled | default(false) %}
 After=tailscaled.service
 {% endif %}
 Wants=network-online.target
-Requires=docker.service
 
 [Service]
 Type=simple

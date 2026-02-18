@@ -87,7 +87,7 @@ openclaw_env_vars:
 # Git sync / migration configuration
 openclaw_git_sync_enabled: true
 openclaw_git_timer_enabled: true
-openclaw_migration_mode: false
+openclaw_git_migration_mode: false
 openclaw_config_repo: "https://github.com/pavelzbornik/openclaw-config"
 openclaw_config_repo_dest: "{{ openclaw_home }}/openclaw-config"
 openclaw_git_tmp_dir: "/tmp/openclaw-config"

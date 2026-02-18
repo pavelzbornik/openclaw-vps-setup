@@ -116,7 +116,7 @@ This lets you validate the playbook safely!
 - **Timezone**: Change in `group_vars/all.yml` → `timezone`
 - **Upstream Submodule**: Enable/disable Node.js, Tailscale, Docker, firewall via `vendor_*` flags
 - **Node.js Version**: Change in `group_vars/all.yml` → `nodejs_version`
-- **OpenClaw Configuration**: Edit template in `roles/openclaw/templates/openclaw.json.j2` (used for config repo template)
+- **OpenClaw Configuration**: Edit template in `roles/openclaw_app/templates/openclaw.json.j2` (used for config repo template)
 
 ---
 

@@ -1,11 +1,11 @@
 ---
 # Handlers for OpenClaw role
 
-- name: reload systemd
+- name: Reload systemd
   systemd:
     daemon_reload: true
 
-- name: restart openclaw
+- name: Restart openclaw
   systemd:
     name: openclaw
     state: restarted
