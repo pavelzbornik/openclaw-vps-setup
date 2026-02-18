@@ -105,12 +105,8 @@
           compress
           delaycompress
           notifempty
+          copytruncate
           create 0640 {{ openclaw_user }} {{ openclaw_user }}
-          sharedscripts
-          postrotate
-              # restart (not reload) — no ExecReload defined in the service unit
-              systemctl restart openclaw > /dev/null 2>&1 || true
-          endscript
       }
     mode: '0644'
   tags:

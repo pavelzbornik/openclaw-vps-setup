@@ -207,11 +207,11 @@ make status       # Check service
    - OpenClaw runs directly on VM
    - Trade-off for simpler setup per requirements
 
-3. **Manual Tailscale authentication**
+2. **Manual Tailscale authentication**
    - Requires SSH to VM and running `tailscale up`
    - Could be automated with auth key
 
-4. **Static secrets**
+3. **Static secrets**
    - Secrets in files or environment variables
    - 1Password integration partially implemented
 

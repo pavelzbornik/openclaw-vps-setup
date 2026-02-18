@@ -253,7 +253,8 @@
     dest: "{{ openclaw_config_dir }}/workspace/"
     owner: "{{ openclaw_user }}"
     group: "{{ openclaw_user }}"
-    mode: '0755'
+    mode: preserve
+    directory_mode: '0755'
     remote_src: true
   when:
     - openclaw_git_repo_available | default(false)
@@ -279,7 +280,8 @@
     dest: "{{ openclaw_config_dir }}/skills/"
     owner: "{{ openclaw_user }}"
     group: "{{ openclaw_user }}"
-    mode: '0755'
+    mode: preserve
+    directory_mode: '0755'
     remote_src: true
   when:
     - openclaw_git_repo_available | default(false)
@@ -402,6 +404,7 @@
       User={{ openclaw_user }}
       WorkingDirectory={{ openclaw_config_repo_dest }}
       ExecStart={{ openclaw_home }}/sync-openclaw-config.sh
+      TimeoutStartSec=300
   when:
     - openclaw_git_repo_available | default(false)
   tags:

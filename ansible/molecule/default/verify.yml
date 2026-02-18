@@ -54,6 +54,7 @@
         - /home/openclaw/.openclaw/credentials
         - /home/openclaw/.openclaw/data
         - /home/openclaw/.openclaw/logs
+        - /home/openclaw/.openclaw/workspace
       tags:
         - verify
 
