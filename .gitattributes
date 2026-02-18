@@ -1,0 +1,13 @@
+# Normalize line endings to LF in the repository and working tree
+* text=auto eol=lf
+
+# Binaries — no EOL conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.deb binary
