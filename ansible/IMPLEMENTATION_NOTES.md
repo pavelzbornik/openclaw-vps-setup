@@ -28,7 +28,7 @@ ansible/
 │   ├── common/                      # Base system setup
 │   ├── openclaw_vendor_base/        # Wrapper around the official openclaw-ansible submodule
 │   ├── openclaw_git/                # Config repo sync and migration
-│   ├── openclaw/                    # OpenClaw installation & systemd unit
+│   ├── openclaw_app/                # OpenClaw installation & systemd unit
 │   └── onepassword/                 # 1Password CLI setup
 ├── molecule/
 │   └── default/                     # Molecule testing framework
@@ -222,7 +222,7 @@ make status       # Check service
 - [ ] Implement SSL/TLS with Let's Encrypt
 - [ ] Add monitoring role (Prometheus/Grafana)
 - [ ] Create backup/restore playbooks
-- [ ] Add CI/CD pipeline integration
+- [x] Add CI/CD pipeline integration
 - [ ] Support multiple OpenClaw instances
 - [ ] Add Discord/Telegram channel provisioning
 - [ ] Integrate with Home Assistant

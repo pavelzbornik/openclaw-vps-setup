@@ -26,7 +26,7 @@ provisioner:
   config_options:
     defaults:
       interpreter_python: auto_silent
-      callback_whitelist: profile_tasks, timer, yaml
+      callbacks_enabled: profile_tasks, timer, yaml
   env:
     OPENCLAW_GATEWAY_TOKEN: "molecule-test-token-not-for-production"
     # Molecule generates its own ansible.cfg (overriding ANSIBLE_CONFIG), so the

@@ -105,7 +105,7 @@
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_git_tmp_clone is defined
-    - openclaw_git_tmp_clone.rc | default(1) == 0
+    - openclaw_git_tmp_clone.after is defined
   tags:
     - openclaw
     - git

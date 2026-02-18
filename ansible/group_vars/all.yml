@@ -50,7 +50,7 @@ extra_packages:
   - acl
 
 # OpenClaw onboarding behavior
-openclaw_onboard_install_daemon: false
+openclaw_app_onboard_install_daemon: false
 openclaw_run_doctor: false
 
 # 1Password Configuration
