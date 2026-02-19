@@ -56,8 +56,9 @@ provisioner:
   #   - Docker-in-Docker is unreliable in CI runners
   #   - Tailscale cannot auth without a real key
   #   - Firewall (UFW+Docker) depends on both of the above
+  #   - SSH hardening requires sshd_config which doesn't exist in Docker containers
   options:
-    extra-vars: '{"vendor_tailscale_enabled": false, "vendor_docker_enabled": false, "vendor_firewall_enabled": false}'
+    extra-vars: '{"vendor_tailscale_enabled": false, "vendor_docker_enabled": false, "vendor_firewall_enabled": false, "ssh_harden": false}'
 
 verifier:
   name: ansible
