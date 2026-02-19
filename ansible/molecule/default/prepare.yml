@@ -4,7 +4,7 @@
 
 - name: Prepare test environment
   hosts: all
-  become: yes
+  become: true
   gather_facts: false
 
   tasks:
@@ -25,9 +25,9 @@
       user:
         name: openclaw
         groups: sudo
-        append: yes
+        append: true
         shell: /bin/bash
-        create_home: yes
+        create_home: true
         state: present
 
     - name: Allow openclaw user to sudo without password

@@ -3,7 +3,7 @@
     "model": "{{ openclaw_config.agent.model }}"
   },
   "gateway": {
-    "bind": "{{ openclaw_config.gateway.bind }}",
+    "bind": "{% if tailscale_enabled | default(false) and openclaw_app_tailscale_ip_result is defined and openclaw_app_tailscale_ip_result.stdout | default('') %}{{ openclaw_app_tailscale_ip_result.stdout | trim }}{% else %}{{ openclaw_config.gateway.bind }}{% endif %}",
     "port": {{ openclaw_config.gateway.port }},
     "auth": {
       "mode": "{{ openclaw_config.gateway.auth.mode }}",

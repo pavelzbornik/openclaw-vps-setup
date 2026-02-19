@@ -37,8 +37,8 @@ services:
     ports:
       # Use random host ports by default to avoid conflicts on developer machines.
       # Set OPENCLAW_SSH_PORT / OPENCLAW_GATEWAY_PORT if you need fixed ports.
-      - "${OPENCLAW_SSH_PORT:-0}:22" # SSH access
-      - "${OPENCLAW_GATEWAY_PORT:-0}:18789" # OpenClaw Gateway
+      - "${OPENCLAW_SSH_PORT:-0}:22"  # SSH access
+      - "${OPENCLAW_GATEWAY_PORT:-0}:18789"  # OpenClaw Gateway
 
 networks:
   ansible-test-network:

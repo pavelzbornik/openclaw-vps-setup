@@ -45,3 +45,32 @@
   tags:
     - common
     - system
+
+- name: Disable SSH password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    state: present
+    backup: true
+    validate: 'sshd -t -f %s'
+  notify: Restart sshd
+  when: ssh_harden | default(true)
+  tags:
+    - common
+    - security
+    - ssh
+
+- name: Disable SSH root login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+    state: present
+    validate: 'sshd -t -f %s'
+  notify: Restart sshd
+  when: ssh_harden | default(true)
+  tags:
+    - common
+    - security
+    - ssh

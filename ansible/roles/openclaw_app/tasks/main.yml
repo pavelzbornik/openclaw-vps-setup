@@ -6,6 +6,15 @@
 # This role only adds what upstream doesn't: pre-baked config files, systemd
 # service, logrotate, and optional onboard/doctor commands.
 
+- name: Get Tailscale IPv4 address for gateway bind
+  command: tailscale ip -4
+  register: openclaw_app_tailscale_ip_result
+  changed_when: false
+  when: tailscale_enabled | default(false)
+  tags:
+    - openclaw
+    - config
+
 - name: Deploy OpenClaw environment file
   template:
     src: openclaw.env.j2
@@ -93,6 +102,19 @@
   tags:
     - openclaw
     - systemd
+
+- name: Deploy default SOUL.md security rules
+  template:
+    src: SOUL.md.j2
+    dest: "{{ openclaw_config_dir }}/SOUL.md"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: '0640'
+    force: false
+  tags:
+    - openclaw
+    - security
+    - config
 
 - name: Create logrotate configuration for OpenClaw
   copy:

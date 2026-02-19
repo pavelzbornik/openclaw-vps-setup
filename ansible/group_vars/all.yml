@@ -44,6 +44,10 @@ ci_test: false
 
 # ─── Local extensions (not in upstream) ──────────────────────────────
 
+# SSH hardening — disables password auth and root login via sshd_config.
+# Set to false only if you need password-based SSH access.
+ssh_harden: true
+
 # Extra packages not covered by upstream system-tools
 extra_packages:
   - python3-pip
@@ -62,7 +66,10 @@ openclaw_config:
   agent:
     model: "anthropic/claude-opus-4"
   gateway:
-    # bind 0.0.0.0 — restrict access via Tailscale or firewall rules, not here
+    # Fallback bind address when Tailscale is disabled.
+    # When tailscale_enabled=true the openclaw_app role automatically binds
+    # to the Tailscale IPv4 address instead, so the gateway is only reachable
+    # inside your private VPN tunnel.
     bind: "0.0.0.0"
     port: "{{ openclaw_port }}"
     auth:

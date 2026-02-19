@@ -1,6 +1,13 @@
 # Pre-commit hooks for openclaw repository
 # See https://pre-commit.com for more information
 # See https://pre-commit.com/hooks.html for more hooks
+#
+# Stages:
+#   pre-commit  — quick checks on every commit (lint, format, secrets)
+#   commit-msg  — commit message format validation (conventional commits)
+#   pre-push    — slow checks before push, mirrors CI molecule job
+
+default_stages: [pre-commit]
 
 repos:
   # General file checks
@@ -39,25 +46,6 @@ repos:
       - id: shellcheck
         args: ['-x']  # Follow source statements
 
-  # Terraform (disabled in Windows dev environment due to CRLF issues)
-  # Run terraform fmt/validate manually or in CI
-  # - repo: https://github.com/antonbabenko/pre-commit-terraform
-  #   rev: v1.88.4
-  #   hooks:
-  #     - id: terraform_fmt
-  #     - id: terraform_validate
-  #     - id: terraform_docs
-  #       args:
-  #         - --hook-config=--path-to-file=README.md
-  #         - --hook-config=--add-to-existing-file=true
-  #         - --hook-config=--create-file-if-not-exist=true
-  #     - id: terraform_tflint
-  #       args:
-  #         - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
-  #     - id: terraform_trivy
-  #       args:
-  #         - --args=--severity=HIGH,CRITICAL
-
   # Ansible linting — uses system ansible-lint (installed by CI or `make install`)
   - repo: local
     hooks:
@@ -93,3 +81,29 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: '^terraform/discord/.*|package.lock.json'
+
+  # ── commit-msg ────────────────────────────────────────────────────────────────
+  # Enforce conventional commits format:
+  #   <type>[optional scope]: <description>
+  #   Types: feat, fix, docs, style, refactor, test, chore, build, ci, perf, revert
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.3.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, style, refactor, test, chore, build, ci, perf, revert]
+
+  # ── pre-push ──────────────────────────────────────────────────────────────────
+  # Molecule tests — mirrors the CI molecule job (slow, requires Docker).
+  # Skips gracefully when Docker is unavailable (e.g. devcontainer without Docker);
+  # the CI molecule job acts as the safety net in that case.
+  - repo: local
+    hooks:
+      - id: molecule-test
+        name: Molecule tests (Ansible)
+        language: system
+        entry: bash -c 'docker info>/dev/null 2>&1 || { echo "Docker unavailable, skipping molecule (CI will run it)"; exit 0; }; cd ansible && molecule test'
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+        verbose: true
