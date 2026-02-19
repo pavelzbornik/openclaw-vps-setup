@@ -10,6 +10,7 @@
   command: tailscale ip -4
   register: openclaw_app_tailscale_ip_result
   changed_when: false
+  failed_when: false
   when: tailscale_enabled | default(false)
   tags:
     - openclaw
