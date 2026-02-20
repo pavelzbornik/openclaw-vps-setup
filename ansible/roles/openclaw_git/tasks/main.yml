@@ -109,6 +109,7 @@
   register: openclaw_git_gh_auth_result
   changed_when: false
   failed_when: false
+  no_log: true
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_git_gh_installed.rc == 0

@@ -161,7 +161,7 @@ function Ensure-SshPublicKey {
         }
 
         Write-WarnMsg "Generating a new keypair."
-        & $sshKeyGenExe.Source -t ed25519 -q -C "openclaw-vm-key" -f $privateKeyPath '-N ""' | Out-Null
+        & $sshKeyGenExe.Source -t ed25519 -q -C "openclaw-vm-key" -f $privateKeyPath -N '""' | Out-Null
 
         if (-not (Test-Path -Path $SshPublicKeyPath)) {
             throw "SSH public key generation failed. Expected key at '$SshPublicKeyPath'."
@@ -189,7 +189,12 @@ function Ensure-UbuntuDisk {
 
     if (-not (Test-Path $archivePath)) {
         Write-Info "Downloading Ubuntu cloud image archive"
-        Invoke-WebRequest -Uri $UbuntuImageUrl -OutFile $archivePath -UseBasicParsing
+        try {
+            Invoke-WebRequest -Uri $UbuntuImageUrl -OutFile $archivePath -UseBasicParsing -TimeoutSec 3600
+        }
+        catch {
+            throw "Failed to download Ubuntu image from '$UbuntuImageUrl' to '$archivePath': $($_.Exception.Message)"
+        }
     }
     else {
         Write-Info "Using cached Ubuntu cloud image archive"
@@ -323,7 +328,9 @@ function Ensure-Vm {
 Ensure-Admin
 Ensure-HyperV
 
-$PrefixLength = Convert-CidrToPrefix -Cidr $SubnetCidr
+if (-not $PSBoundParameters.ContainsKey('PrefixLength')) {
+    $PrefixLength = Convert-CidrToPrefix -Cidr $SubnetCidr
+}
 Ensure-SwitchNetworking
 
 $publicKey = Ensure-SshPublicKey

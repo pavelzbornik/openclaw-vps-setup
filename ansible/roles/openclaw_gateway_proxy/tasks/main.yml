@@ -40,7 +40,7 @@
         - lan
         - tls
 
-    - name: Generate self-signed certificate for OpenClaw LAN ingress
+    - name: Generate private key for OpenClaw LAN ingress
       community.crypto.openssl_privatekey:
         path: "{{ openclaw_nginx_ssl_key }}"
         type: RSA
@@ -59,33 +59,37 @@
         - tls
 
     - name: Generate self-signed certificate for OpenClaw LAN ingress
-      community.crypto.x509_certificate:
-        path: "{{ openclaw_nginx_ssl_cert }}"
+      community.crypto.openssl_csr_pipe:
         privatekey_path: "{{ openclaw_nginx_ssl_key }}"
-        provider: selfsigned
-        selfsigned_not_after: "+1095d"
-        subject: "{{ openclaw_nginx_ssl_subject }}"
+        common_name: "{{ openclaw_nginx_server_name }}"
         subject_alt_name:
           - "{{ openclaw_nginx_ssl_san }}"
-        owner: root
-        group: root
-        mode: '0644'
+      register: openclaw_gateway_proxy_nginx_ssl_csr
       when:
         - openclaw_gateway_proxy_nginx_ssl_check.results is defined
         - not (openclaw_gateway_proxy_nginx_ssl_check.results | map(attribute='stat.exists') | min)
-      notify: Reload nginx
       tags:
         - openclaw
         - nginx
         - lan
         - tls
 
-    - name: Set permissions on nginx TLS private key
-      file:
-        path: "{{ openclaw_nginx_ssl_key }}"
+    - name: Generate self-signed certificate for OpenClaw LAN ingress
+      community.crypto.x509_certificate:
+        path: "{{ openclaw_nginx_ssl_cert }}"
+        csr_content: "{{ openclaw_gateway_proxy_nginx_ssl_csr.csr }}"
+        privatekey_path: "{{ openclaw_nginx_ssl_key }}"
+        provider: selfsigned
+        selfsigned_not_after: "+1095d"
         owner: root
         group: root
-        mode: '0600'
+        mode: '0644'
+      when:
+        - openclaw_gateway_proxy_nginx_ssl_check.results is defined
+        - not (openclaw_gateway_proxy_nginx_ssl_check.results | map(attribute='stat.exists') | min)
+        - openclaw_gateway_proxy_nginx_ssl_csr is defined
+        - openclaw_gateway_proxy_nginx_ssl_csr.csr is defined
+      notify: Reload nginx
       tags:
         - openclaw
         - nginx
@@ -154,6 +158,7 @@
     - name: Allow loopback access to OpenClaw gateway port
       community.general.ufw:
         rule: allow
+        insert: 1
         proto: tcp
         port: "{{ openclaw_port | string }}"
         src: "127.0.0.1/32"
@@ -168,6 +173,7 @@
     - name: Deny direct OpenClaw gateway port exposure
       community.general.ufw:
         rule: deny
+        insert: 2
         proto: tcp
         port: "{{ openclaw_port | string }}"
         comment: 'Block direct OpenClaw gateway access'

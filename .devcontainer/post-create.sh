@@ -26,17 +26,24 @@ import_host_ssh_keys() {
     chmod 700 "$container_ssh_dir"
 
     if [ ! -d "$host_ssh_dir" ]; then
+        print_warn "Host SSH mount not found at $host_ssh_dir; skipping SSH key import."
         return
     fi
 
     for key_name in openclaw_vm_ansible id_ed25519; do
         if [ -f "$host_ssh_dir/$key_name" ] && [ ! -f "$container_ssh_dir/$key_name" ]; then
-            install -m 600 "$host_ssh_dir/$key_name" "$container_ssh_dir/$key_name"
-            print_info "Imported SSH private key: $key_name"
+            if install -m 600 "$host_ssh_dir/$key_name" "$container_ssh_dir/$key_name"; then
+                print_info "Imported SSH private key: $key_name"
+            else
+                print_warn "Failed to import SSH private key: $key_name"
+            fi
         fi
         if [ -f "$host_ssh_dir/$key_name.pub" ] && [ ! -f "$container_ssh_dir/$key_name.pub" ]; then
-            install -m 644 "$host_ssh_dir/$key_name.pub" "$container_ssh_dir/$key_name.pub"
-            print_info "Imported SSH public key: $key_name.pub"
+            if install -m 644 "$host_ssh_dir/$key_name.pub" "$container_ssh_dir/$key_name.pub"; then
+                print_info "Imported SSH public key: $key_name.pub"
+            else
+                print_warn "Failed to import SSH public key: $key_name.pub"
+            fi
         fi
     done
 }
@@ -52,7 +59,6 @@ cd /workspaces/openclaw-vps-setup || exit 1
 
 if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     pre-commit install --install-hooks || print_warn "Could not install pre-commit hooks."
-    pre-commit autoupdate || print_warn "Could not update pre-commit hooks (network issue?)"
 else
     print_warn "Skipping pre-commit hook setup: workspace is not a Git repository yet."
 fi
@@ -161,10 +167,42 @@ else
     print_warn "Ansible ping test failed. Try running: ansible all -i inventory/test-container.yml -m ping"
 fi
 
-# Intstall Claude Code CLI
+# Install Claude Code CLI
 print_info "Installing Claude Code CLI..."
 if ! command -v claude &> /dev/null; then
-    curl -fsSL https://claude.ai/install.sh | bash
+    if ! command -v npm >/dev/null 2>&1; then
+        print_warn "npm not found; cannot perform verified Claude CLI install."
+        exit 1
+    fi
+
+    CLAUDE_CLI_PACKAGE="@anthropic-ai/claude-code"
+    CLAUDE_CLI_VERSION="${CLAUDE_CLI_VERSION:-latest}"
+    if [ "$CLAUDE_CLI_VERSION" = "latest" ]; then
+        CLAUDE_CLI_VERSION="$(npm view "$CLAUDE_CLI_PACKAGE" version --silent)"
+    fi
+
+    print_info "Installing $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION (checksum-verified)..."
+    CLAUDE_TARBALL_URL="$(npm view "$CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION" dist.tarball --silent)"
+    CLAUDE_INTEGRITY="$(npm view "$CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION" dist.integrity --silent)"
+    if [ -z "$CLAUDE_TARBALL_URL" ] || [ -z "$CLAUDE_INTEGRITY" ]; then
+        print_warn "Failed to resolve tarball URL or integrity for $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION."
+        exit 1
+    fi
+
+    CLAUDE_TMP_TGZ="$(mktemp /tmp/claude-code.XXXXXX.tgz)"
+    trap 'rm -f "$CLAUDE_TMP_TGZ"' EXIT
+    curl -fsSL "$CLAUDE_TARBALL_URL" -o "$CLAUDE_TMP_TGZ"
+
+    CLAUDE_EXPECTED_SHA512_B64="${CLAUDE_INTEGRITY#sha512-}"
+    CLAUDE_ACTUAL_SHA512_B64="$(openssl dgst -sha512 -binary "$CLAUDE_TMP_TGZ" | openssl base64 -A)"
+    if [ "$CLAUDE_ACTUAL_SHA512_B64" != "$CLAUDE_EXPECTED_SHA512_B64" ]; then
+        print_warn "Checksum verification failed for $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION."
+        exit 1
+    fi
+
+    npm install -g "$CLAUDE_TMP_TGZ"
+    rm -f "$CLAUDE_TMP_TGZ"
+    trap - EXIT
 else
     print_info "Claude Code CLI is already installed."
 fi

@@ -108,7 +108,8 @@ openclaw_env_vars:
 
 # Git sync / migration configuration
 openclaw_git_sync_enabled: true
-openclaw_git_timer_enabled: true
+# Scheduling precedence: when cron is enabled, keep timer disabled.
+openclaw_git_timer_enabled: false
 openclaw_git_cron_enabled: true
 openclaw_git_cron_minute: "17"
 openclaw_git_cron_hour: "*/6"
