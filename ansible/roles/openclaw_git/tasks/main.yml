@@ -56,12 +56,7 @@
 
 - name: Set effective config repo URL for authenticated git operations
   set_fact:
-    openclaw_git_repo_url_effective: >-
-      {{
-        openclaw_config_repo
-        | regex_replace('^https://', 'https://x-access-token:' ~ openclaw_git_github_token_value ~ '@')
-      }}
-  no_log: true
+    openclaw_git_repo_url_effective: "{{ openclaw_config_repo }}"
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_git_github_token_value is defined
@@ -220,7 +215,7 @@
     - openclaw_git_sync_enabled | bool
     - openclaw_git_tmp_clone is defined
     - openclaw_git_tmp_clone.rc | default(1) != 0
-    - (openclaw_git_tmp_clone.stderr | default('')) is search("pathspec 'main'")
+    - (openclaw_git_tmp_clone.stderr | default('')) is search("remote HEAD refers to nonexistent ref")
   tags:
     - openclaw
     - git
@@ -305,7 +300,7 @@
 
 - name: Mark repo availability
   set_fact:
-    openclaw_git_repo_available: "{{ not (openclaw_git_dest_clone.failed | default(false)) }}"
+    openclaw_git_repo_available: "{{ (openclaw_git_dest_clone.rc | default(1)) == 0 }}"
   when: openclaw_git_sync_enabled | bool
   tags:
     - openclaw

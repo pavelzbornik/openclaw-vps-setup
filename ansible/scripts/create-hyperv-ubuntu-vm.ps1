@@ -9,7 +9,6 @@ param(
     [string]$SubnetCidr = "192.168.100.0/24",
     [string]$HostGatewayIp = "192.168.100.1",
     [string]$VmIp = "",
-    [int]$PrefixLength = 24,
     [int]$CpuCount = 2,
     [ValidateSet(1, 2)]
     [int]$VmGeneration = 1,
@@ -17,6 +16,7 @@ param(
     [string]$VmRootPath = "C:\HyperV\OpenClaw",
     [string]$SshPublicKeyPath = "$HOME\.ssh\openclaw_vm.pub",
     [string]$UbuntuImageUrl = "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64-azure.vhd.tar.gz",
+    [string]$UbuntuChecksumUrl = "https://cloud-images.ubuntu.com/releases/noble/release/SHA256SUMS",
     [int]$SshWaitTimeoutSeconds = 900,
     [bool]$UseBaseDiskDirect = $true,
     [switch]$ForceRecreate
@@ -162,7 +162,7 @@ function Ensure-SshPublicKey {
         }
 
         Write-WarnMsg "Generating a new keypair."
-        "$privateKeyPath`n`n`n" | & $sshKeyGenExe.Source -t ed25519 -q -C "openclaw-vm-key" | Out-Null
+        & $sshKeyGenExe.Source -t ed25519 -q -C "openclaw-vm-key" -f $privateKeyPath -N "" | Out-Null
 
         if (-not (Test-Path -Path $SshPublicKeyPath)) {
             throw "SSH public key generation failed. Expected key at '$SshPublicKeyPath'."
@@ -194,6 +194,24 @@ function Ensure-UbuntuDisk {
     }
     else {
         Write-Info "Using cached Ubuntu cloud image archive"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($UbuntuChecksumUrl)) {
+        Write-Info "Verifying Ubuntu cloud image checksum"
+        $checksumFile = Join-Path $WorkingDirectory "SHA256SUMS"
+        Invoke-WebRequest -Uri $UbuntuChecksumUrl -OutFile $checksumFile
+        $checksumContent = Get-Content -Path $checksumFile -Raw
+        $expectedLine = ($checksumContent -split "`n") | Where-Object { $_ -match [regex]::Escape($archiveName) } | Select-Object -First 1
+        if (-not $expectedLine) {
+            throw "Could not find checksum for '$archiveName' in '$UbuntuChecksumUrl'."
+        }
+        $expectedHash = ($expectedLine -split '\s+')[0].Trim().ToUpperInvariant()
+        $actualHash = (Get-FileHash -Path $archivePath -Algorithm SHA256).Hash.ToUpperInvariant()
+        if ($actualHash -ne $expectedHash) {
+            Remove-Item -Path $archivePath -Force
+            throw "Checksum mismatch for '$archiveName'. Expected: $expectedHash  Got: $actualHash. Downloaded file removed."
+        }
+        Write-Info "Checksum verified: $actualHash"
     }
 
     $existingVhd = Get-ChildItem -Path $extractDir -Filter "*.vhd" -File -ErrorAction SilentlyContinue | Select-Object -First 1
