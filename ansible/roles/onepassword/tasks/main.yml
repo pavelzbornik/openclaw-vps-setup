@@ -46,6 +46,8 @@
     fail_msg: >-
       OP service account token is required. Set vault_openclaw_op_service_account_token
       in group_vars/vault.yml and re-run deploy.
+  when:
+    - not (ci_test | default(false))
   tags:
     - onepassword
 
