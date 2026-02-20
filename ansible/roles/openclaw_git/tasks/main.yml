@@ -56,7 +56,17 @@
 
 - name: Set effective config repo URL
   set_fact:
-    openclaw_git_repo_url_effective: "{{ openclaw_config_repo }}"
+    openclaw_git_repo_url_effective: >-
+      {{
+        (openclaw_config_repo | regex_replace('^https://', 'https://x-access-token:' ~ openclaw_git_github_token_value ~ '@'))
+        if (
+          (openclaw_git_github_token_value is defined) and
+          (openclaw_git_github_token_value | length > 0) and
+          (openclaw_config_repo is match('^https://'))
+        )
+        else openclaw_config_repo
+      }}
+  no_log: true
   when:
     - openclaw_git_sync_enabled | bool
     - openclaw_config_repo is defined
@@ -296,7 +306,7 @@
 
 - name: Mark repo availability
   set_fact:
-    openclaw_git_repo_available: "{{ not (openclaw_git_dest_clone.failed | default(false)) }}"
+    openclaw_git_repo_available: "{{ openclaw_git_dest_clone.after is defined and openclaw_git_dest_clone.after != '' }}"
   when: openclaw_git_sync_enabled | bool
   tags:
     - openclaw
@@ -746,6 +756,35 @@
       {{ openclaw_home }}/sync-openclaw-config.sh
       >> {{ openclaw_home }}/sync-openclaw-config.log 2>&1
     state: "{{ 'present' if (openclaw_git_cron_enabled | default(false)) else 'absent' }}"
+  when:
+    - openclaw_git_repo_available | default(false)
+    - not (ci_test | default(false))
+    - openclaw_git_crontab_bin is defined
+    - openclaw_git_crontab_bin.stat is defined
+    - openclaw_git_crontab_bin.stat.exists | default(false)
+  tags:
+    - openclaw
+    - git
+    - cron
+
+- name: Install logrotate for OpenClaw config sync cron log
+  copy:
+    dest: /etc/logrotate.d/openclaw-sync-openclaw-config
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      {{ openclaw_home }}/sync-openclaw-config.log {
+          su {{ openclaw_user }} {{ openclaw_user }}
+          daily
+          rotate 14
+          size 10M
+          missingok
+          notifempty
+          compress
+          delaycompress
+          create 0600 {{ openclaw_user }} {{ openclaw_user }}
+      }
   when:
     - openclaw_git_repo_available | default(false)
     - not (ci_test | default(false))

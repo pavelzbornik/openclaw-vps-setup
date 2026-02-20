@@ -215,6 +215,8 @@ openclaw --version
 
 ### Verify LAN HTTPS ingress (Nginx)
 
+LAN ingress is opt-in. Enable it per host/group by setting `openclaw_lan_enabled: true` in inventory/group vars and adjust `openclaw_lan_subnet` if your LAN is not `192.168.1.0/24`.
+
 ```bash
 sudo systemctl status nginx --no-pager
 sudo ss -tulpen | grep -E ':(80|443)'

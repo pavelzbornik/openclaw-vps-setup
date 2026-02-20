@@ -18,6 +18,55 @@ print_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
+install_claude_cli() {
+    if command -v claude &> /dev/null; then
+        print_info "Claude Code CLI is already installed."
+        return 0
+    fi
+
+    if ! command -v npm >/dev/null 2>&1; then
+        print_warn "npm not found; cannot perform verified Claude CLI install."
+        return 1
+    fi
+
+    CLAUDE_CLI_PACKAGE="@anthropic-ai/claude-code"
+    CLAUDE_CLI_VERSION="${CLAUDE_CLI_VERSION:-latest}"
+    if [ "$CLAUDE_CLI_VERSION" = "latest" ]; then
+        CLAUDE_CLI_VERSION="$(npm view "$CLAUDE_CLI_PACKAGE" version --silent)"
+    fi
+
+    print_info "Installing $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION (checksum-verified)..."
+    CLAUDE_TARBALL_URL="$(npm view "$CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION" dist.tarball --silent)"
+    CLAUDE_INTEGRITY="$(npm view "$CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION" dist.integrity --silent)"
+    if [ -z "$CLAUDE_TARBALL_URL" ] || [ -z "$CLAUDE_INTEGRITY" ]; then
+        print_warn "Failed to resolve tarball URL or integrity for $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION."
+        return 1
+    fi
+
+    CLAUDE_TMP_TGZ="$(mktemp /tmp/claude-code.XXXXXX.tgz)"
+    trap 'rm -f "$CLAUDE_TMP_TGZ"' RETURN
+    if ! curl -fsSL "$CLAUDE_TARBALL_URL" -o "$CLAUDE_TMP_TGZ"; then
+        print_warn "Failed to download Claude CLI tarball from npm registry."
+        return 1
+    fi
+
+    CLAUDE_EXPECTED_SHA512_B64="${CLAUDE_INTEGRITY#sha512-}"
+    CLAUDE_ACTUAL_SHA512_B64="$(openssl dgst -sha512 -binary "$CLAUDE_TMP_TGZ" | openssl base64 -A)"
+    if [ "$CLAUDE_ACTUAL_SHA512_B64" != "$CLAUDE_EXPECTED_SHA512_B64" ]; then
+        print_warn "Checksum verification failed for $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION."
+        return 1
+    fi
+
+    if ! npm install -g "$CLAUDE_TMP_TGZ"; then
+        print_warn "npm install failed for verified Claude CLI package."
+        return 1
+    fi
+
+    rm -f "$CLAUDE_TMP_TGZ"
+    trap - RETURN
+    return 0
+}
+
 import_host_ssh_keys() {
     local host_ssh_dir="$HOME/.ssh-host"
     local container_ssh_dir="$HOME/.ssh"
@@ -169,43 +218,7 @@ fi
 
 # Install Claude Code CLI
 print_info "Installing Claude Code CLI..."
-if ! command -v claude &> /dev/null; then
-    if ! command -v npm >/dev/null 2>&1; then
-        print_warn "npm not found; cannot perform verified Claude CLI install."
-        exit 1
-    fi
-
-    CLAUDE_CLI_PACKAGE="@anthropic-ai/claude-code"
-    CLAUDE_CLI_VERSION="${CLAUDE_CLI_VERSION:-latest}"
-    if [ "$CLAUDE_CLI_VERSION" = "latest" ]; then
-        CLAUDE_CLI_VERSION="$(npm view "$CLAUDE_CLI_PACKAGE" version --silent)"
-    fi
-
-    print_info "Installing $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION (checksum-verified)..."
-    CLAUDE_TARBALL_URL="$(npm view "$CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION" dist.tarball --silent)"
-    CLAUDE_INTEGRITY="$(npm view "$CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION" dist.integrity --silent)"
-    if [ -z "$CLAUDE_TARBALL_URL" ] || [ -z "$CLAUDE_INTEGRITY" ]; then
-        print_warn "Failed to resolve tarball URL or integrity for $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION."
-        exit 1
-    fi
-
-    CLAUDE_TMP_TGZ="$(mktemp /tmp/claude-code.XXXXXX.tgz)"
-    trap 'rm -f "$CLAUDE_TMP_TGZ"' EXIT
-    curl -fsSL "$CLAUDE_TARBALL_URL" -o "$CLAUDE_TMP_TGZ"
-
-    CLAUDE_EXPECTED_SHA512_B64="${CLAUDE_INTEGRITY#sha512-}"
-    CLAUDE_ACTUAL_SHA512_B64="$(openssl dgst -sha512 -binary "$CLAUDE_TMP_TGZ" | openssl base64 -A)"
-    if [ "$CLAUDE_ACTUAL_SHA512_B64" != "$CLAUDE_EXPECTED_SHA512_B64" ]; then
-        print_warn "Checksum verification failed for $CLAUDE_CLI_PACKAGE@$CLAUDE_CLI_VERSION."
-        exit 1
-    fi
-
-    npm install -g "$CLAUDE_TMP_TGZ"
-    rm -f "$CLAUDE_TMP_TGZ"
-    trap - EXIT
-else
-    print_info "Claude Code CLI is already installed."
-fi
+install_claude_cli || print_warn "Claude Code CLI installation skipped/failed; continuing setup."
 
 
 

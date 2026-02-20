@@ -35,7 +35,7 @@ function Write-WarnMsg {
     Write-Host "[WARN] $Message" -ForegroundColor Yellow
 }
 
-function Ensure-Admin {
+function Assert-AdminPrivilege {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -205,6 +205,9 @@ function Ensure-UbuntuDisk {
         Write-Info "Extracting Ubuntu cloud image"
         New-Item -Path $extractDir -ItemType Directory -Force | Out-Null
         tar -xzf $archivePath -C $extractDir
+        if ($LASTEXITCODE -ne 0) {
+            throw "tar extraction failed (exit $LASTEXITCODE) for archive '$archivePath' into '$extractDir'."
+        }
 
         $existingVhd = Get-ChildItem -Path $extractDir -Filter "*.vhd" -File -ErrorAction SilentlyContinue | Select-Object -First 1
         if (-not $existingVhd) {
@@ -221,12 +224,17 @@ function Ensure-UbuntuDisk {
 }
 
 function New-CloudInitSeedDisk {
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [string]$DiskPath,
         [string]$UserData,
         [string]$MetaData,
         [string]$NetworkConfig
     )
+
+    if (-not $PSCmdlet.ShouldProcess($DiskPath, "Create and initialize cloud-init seed disk")) {
+        return
+    }
 
     if (Test-Path $DiskPath) {
         Remove-Item -Path $DiskPath -Force
@@ -246,6 +254,13 @@ function New-CloudInitSeedDisk {
         $disk = Get-Disk -Number $mountedVhd.DiskNumber -ErrorAction SilentlyContinue
         if (-not $disk) {
             throw "Could not find mounted seed VHD disk object."
+        }
+
+        Set-Disk -Number $disk.Number -IsOffline $false -ErrorAction Stop
+        Set-Disk -Number $disk.Number -IsReadOnly $false -ErrorAction Stop
+        $disk = Get-Disk -Number $mountedVhd.DiskNumber -ErrorAction Stop
+        if ($disk.IsOffline -or $disk.IsReadOnly) {
+            throw "Mounted seed VHD disk number $($disk.Number) is not writable after Set-Disk."
         }
 
         Initialize-Disk -Number $disk.Number -PartitionStyle MBR | Out-Null
@@ -325,7 +340,7 @@ function Ensure-Vm {
     Start-VM -Name $VmName | Out-Null
 }
 
-Ensure-Admin
+Assert-AdminPrivilege
 Ensure-HyperV
 
 if (-not $PSBoundParameters.ContainsKey('PrefixLength')) {
@@ -441,7 +456,7 @@ if (-not (Wait-ForSsh -Address $resolvedVmIp -TimeoutSeconds $SshWaitTimeoutSeco
 }
 
 Write-Info "VM is reachable over SSH."
-Write-Host ""
+Write-Information -MessageData "" -InformationAction Continue
 Write-Host "Next commands:" -ForegroundColor Cyan
-Write-Host "  ssh -i $([System.IO.Path]::ChangeExtension($SshPublicKeyPath, $null)) $VmUser@$resolvedVmIp"
-Write-Host "  cd ansible && ./scripts/deploy.sh --check -vv"
+Write-Information -MessageData "  ssh -i $([System.IO.Path]::ChangeExtension($SshPublicKeyPath, $null)) $VmUser@$resolvedVmIp" -InformationAction Continue
+Write-Information -MessageData "  cd ansible && ./scripts/deploy.sh --check -vv" -InformationAction Continue

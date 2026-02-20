@@ -58,7 +58,7 @@
         - lan
         - tls
 
-    - name: Generate self-signed certificate for OpenClaw LAN ingress
+    - name: Generate CSR for OpenClaw LAN ingress
       community.crypto.openssl_csr_pipe:
         privatekey_path: "{{ openclaw_nginx_ssl_key }}"
         common_name: "{{ openclaw_nginx_server_name }}"
