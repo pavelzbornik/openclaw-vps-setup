@@ -9,6 +9,7 @@ param(
     [string]$SubnetCidr = "192.168.100.0/24",
     [string]$HostGatewayIp = "192.168.100.1",
     [string]$VmIp = "",
+    [int]$PrefixLength = 24,
     [int]$CpuCount = 2,
     [ValidateSet(1, 2)]
     [int]$VmGeneration = 1,
@@ -16,7 +17,6 @@ param(
     [string]$VmRootPath = "C:\HyperV\OpenClaw",
     [string]$SshPublicKeyPath = "$HOME\.ssh\openclaw_vm.pub",
     [string]$UbuntuImageUrl = "https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-amd64-azure.vhd.tar.gz",
-    [string]$UbuntuChecksumUrl = "https://cloud-images.ubuntu.com/releases/noble/release/SHA256SUMS",
     [int]$SshWaitTimeoutSeconds = 900,
     [bool]$UseBaseDiskDirect = $true,
     [switch]$ForceRecreate
@@ -83,8 +83,6 @@ function Ensure-SwitchNetworking {
         return
     }
 
-    $existingSwitch = Get-VMSwitch -Name $SwitchName -ErrorAction SilentlyContinue
-
     $switchAdapter = Get-NetAdapter | Where-Object { $_.Name -like "vEthernet ($SwitchName)" }
     if (-not $switchAdapter) {
         throw "Host vEthernet adapter for switch '$SwitchName' not found."
@@ -134,6 +132,7 @@ function Wait-ForVmIp {
             }
         }
         catch {
+            Write-Verbose "Wait-ForVmIp probe failed for VM '$Name': $($_.Exception.Message)"
         }
         Start-Sleep -Seconds 5
     }
@@ -162,7 +161,7 @@ function Ensure-SshPublicKey {
         }
 
         Write-WarnMsg "Generating a new keypair."
-        & $sshKeyGenExe.Source -t ed25519 -q -C "openclaw-vm-key" -f $privateKeyPath -N "" | Out-Null
+        & $sshKeyGenExe.Source -t ed25519 -q -C "openclaw-vm-key" -f $privateKeyPath '-N ""' | Out-Null
 
         if (-not (Test-Path -Path $SshPublicKeyPath)) {
             throw "SSH public key generation failed. Expected key at '$SshPublicKeyPath'."
@@ -190,28 +189,10 @@ function Ensure-UbuntuDisk {
 
     if (-not (Test-Path $archivePath)) {
         Write-Info "Downloading Ubuntu cloud image archive"
-        Invoke-WebRequest -Uri $UbuntuImageUrl -OutFile $archivePath
+        Invoke-WebRequest -Uri $UbuntuImageUrl -OutFile $archivePath -UseBasicParsing
     }
     else {
         Write-Info "Using cached Ubuntu cloud image archive"
-    }
-
-    if (-not [string]::IsNullOrWhiteSpace($UbuntuChecksumUrl)) {
-        Write-Info "Verifying Ubuntu cloud image checksum"
-        $checksumFile = Join-Path $WorkingDirectory "SHA256SUMS"
-        Invoke-WebRequest -Uri $UbuntuChecksumUrl -OutFile $checksumFile
-        $checksumContent = Get-Content -Path $checksumFile -Raw
-        $expectedLine = ($checksumContent -split "`n") | Where-Object { $_ -match [regex]::Escape($archiveName) } | Select-Object -First 1
-        if (-not $expectedLine) {
-            throw "Could not find checksum for '$archiveName' in '$UbuntuChecksumUrl'."
-        }
-        $expectedHash = ($expectedLine -split '\s+')[0].Trim().ToUpperInvariant()
-        $actualHash = (Get-FileHash -Path $archivePath -Algorithm SHA256).Hash.ToUpperInvariant()
-        if ($actualHash -ne $expectedHash) {
-            Remove-Item -Path $archivePath -Force
-            throw "Checksum mismatch for '$archiveName'. Expected: $expectedHash  Got: $actualHash. Downloaded file removed."
-        }
-        Write-Info "Checksum verified: $actualHash"
     }
 
     $existingVhd = Get-ChildItem -Path $extractDir -Filter "*.vhd" -File -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -257,7 +238,7 @@ function New-CloudInitSeedDisk {
     $mountedVhd = Mount-VHD -Path $DiskPath -Passthru
 
     try {
-        $disk = Get-Disk | Where-Object { $_.Location -eq $mountedVhd.Path }
+        $disk = Get-Disk -Number $mountedVhd.DiskNumber -ErrorAction SilentlyContinue
         if (-not $disk) {
             throw "Could not find mounted seed VHD disk object."
         }
@@ -296,6 +277,7 @@ function Wait-ForSsh {
             }
         }
         catch {
+            Write-Verbose "Wait-ForSsh probe failed for '$Address:22': $($_.Exception.Message)"
         }
         Start-Sleep -Seconds 5
     }
@@ -353,8 +335,14 @@ New-Item -Path $vmFolder -ItemType Directory -Force | Out-Null
 $baseVhdPath = Ensure-UbuntuDisk -WorkingDirectory $imageWorkDir
 $osDiskPath = Join-Path $vmFolder "$VmName-os.vhd"
 $seedDiskPath = Join-Path $vmFolder "$VmName-seed.vhd"
+$useBaseDiskDirectEffective = $UseBaseDiskDirect
 
-if ($UseBaseDiskDirect) {
+if ($ForceRecreate -and $UseBaseDiskDirect) {
+    Write-Info "-ForceRecreate is set; creating a fresh VM OS disk copy instead of reusing base VHD directly"
+    $useBaseDiskDirectEffective = $false
+}
+
+if ($useBaseDiskDirectEffective) {
     Write-Info "Using base VHD directly as VM OS disk"
     $osDiskPath = $baseVhdPath
 }
@@ -390,7 +378,6 @@ ssh_pwauth: false
 runcmd:
   - systemctl enable ssh
   - systemctl restart ssh
-  - cloud-init status --wait
 "@
 
 $metaData = @"
@@ -420,7 +407,7 @@ ethernets:
             - $VmIp/$PrefixLength
         routes:
             - to: default
-                via: $HostGatewayIp
+              via: $HostGatewayIp
         nameservers:
             addresses:
                 - 1.1.1.1

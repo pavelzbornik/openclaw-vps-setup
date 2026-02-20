@@ -10,13 +10,14 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+$InformationPreference = "Continue"
 
 function Write-Info {
     param([string]$Message)
-    Write-Host "[INFO] $Message" -ForegroundColor Green
+    Write-Information -MessageData "[INFO] $Message" -InformationAction Continue
 }
 
-function Ensure-SshTools {
+function Initialize-SshTool {
     $ssh = Get-Command ssh -ErrorAction SilentlyContinue
     $scp = Get-Command scp -ErrorAction SilentlyContinue
     $sshKeygen = Get-Command ssh-keygen -ErrorAction SilentlyContinue
@@ -32,7 +33,7 @@ function Ensure-SshTools {
     }
 }
 
-function Ensure-SshKey {
+function Initialize-SshKey {
     param(
         [string]$KeyPath,
         [string]$SshKeygenExe
@@ -43,9 +44,7 @@ function Ensure-SshKey {
 
     if (-not (Test-Path $KeyPath) -or -not (Test-Path $pubPath)) {
         Write-Info "Generating SSH keypair at '$KeyPath'"
-        $escapedKeyPath = $KeyPath.Replace('"', '""')
-        $keygenArgs = "-t ed25519 -f `"$escapedKeyPath`" -q -N `"`" -C `"openclaw-vm-key`""
-        $keygenProc = Start-Process -FilePath $SshKeygenExe -ArgumentList $keygenArgs -Wait -NoNewWindow -PassThru
+        $keygenProc = Start-Process -FilePath $SshKeygenExe -ArgumentList @("-t", "ed25519", "-f", $KeyPath, "-q", "-N", "", "-C", "openclaw-vm-key") -Wait -NoNewWindow -PassThru
         if ($keygenProc.ExitCode -ne 0) {
             throw "ssh-keygen failed with exit code $($keygenProc.ExitCode)."
         }
@@ -111,7 +110,7 @@ Write-Info "VM User: $VmUser"
 Write-Info "SSH Key: $SshKeyPath"
 Write-Host ""
 
-$tools = Ensure-SshTools
+$tools = Initialize-SshTool
 
 Write-Info "Checking SSH port reachability"
 $portTest = Test-NetConnection -ComputerName $VmAddress -Port $SshPort -WarningAction SilentlyContinue
@@ -119,7 +118,7 @@ if (-not $portTest.TcpTestSucceeded) {
     throw "SSH port $SshPort is not reachable on $VmAddress."
 }
 
-$pubPath = Ensure-SshKey -KeyPath $SshKeyPath -SshKeygenExe $tools.SshKeygen
+$pubPath = Initialize-SshKey -KeyPath $SshKeyPath -SshKeygenExe $tools.SshKeygen
 Add-PublicKeyToVm -SshExe $tools.Ssh -ScpExe $tools.Scp -Address $VmAddress -User $VmUser -Port $SshPort -PublicKeyPath $pubPath
 Test-KeyBasedSsh -SshExe $tools.Ssh -Address $VmAddress -User $VmUser -Port $SshPort -PrivateKeyPath $SshKeyPath -TimeoutSeconds $SshTimeoutSeconds
 

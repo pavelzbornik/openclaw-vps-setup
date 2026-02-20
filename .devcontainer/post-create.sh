@@ -18,6 +18,29 @@ print_warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
+import_host_ssh_keys() {
+    local host_ssh_dir="$HOME/.ssh-host"
+    local container_ssh_dir="$HOME/.ssh"
+
+    mkdir -p "$container_ssh_dir"
+    chmod 700 "$container_ssh_dir"
+
+    if [ ! -d "$host_ssh_dir" ]; then
+        return
+    fi
+
+    for key_name in openclaw_vm_ansible id_ed25519; do
+        if [ -f "$host_ssh_dir/$key_name" ] && [ ! -f "$container_ssh_dir/$key_name" ]; then
+            install -m 600 "$host_ssh_dir/$key_name" "$container_ssh_dir/$key_name"
+            print_info "Imported SSH private key: $key_name"
+        fi
+        if [ -f "$host_ssh_dir/$key_name.pub" ] && [ ! -f "$container_ssh_dir/$key_name.pub" ]; then
+            install -m 644 "$host_ssh_dir/$key_name.pub" "$container_ssh_dir/$key_name.pub"
+            print_info "Imported SSH public key: $key_name.pub"
+        fi
+    done
+}
+
 # Install and configure pre-commit
 print_info "Installing pre-commit..."
 if ! command -v pre-commit &> /dev/null; then
@@ -27,8 +50,12 @@ fi
 print_info "Setting up pre-commit hooks..."
 cd /workspaces/openclaw-vps-setup || exit 1
 
-pre-commit install --install-hooks
-pre-commit autoupdate || print_warn "Could not update pre-commit hooks (network issue?)"
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    pre-commit install --install-hooks || print_warn "Could not install pre-commit hooks."
+    pre-commit autoupdate || print_warn "Could not update pre-commit hooks (network issue?)"
+else
+    print_warn "Skipping pre-commit hook setup: workspace is not a Git repository yet."
+fi
 
 # Navigate to ansible directory
 cd /workspaces/openclaw-vps-setup/ansible || exit 1
@@ -88,6 +115,7 @@ fi
 
 # Setup SSH access to target container
 print_info "Setting up SSH access to target container..."
+import_host_ssh_keys
 
 # Get the target container name
 TARGET_CONTAINER=$($DOCKER_SUDO docker ps --filter "ancestor=openclaw/ubuntu-target:24.04-systemd" --format "{{.Names}}" | head -1)

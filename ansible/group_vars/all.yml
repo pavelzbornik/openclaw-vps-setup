@@ -65,6 +65,7 @@ ssh_harden: true
 extra_packages:
   - python3-pip
   - acl
+  - rsync
 
 # OpenClaw onboarding behavior
 openclaw_app_onboard_install_daemon: false

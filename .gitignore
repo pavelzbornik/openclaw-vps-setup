@@ -4,3 +4,4 @@ docs/research/
 .env
 deploy-*.*
 vm-*.*
+openclaw-install/

@@ -54,24 +54,12 @@
     - openclaw
     - git
 
-- name: Set effective config repo URL for authenticated git operations
+- name: Set effective config repo URL
   set_fact:
     openclaw_git_repo_url_effective: "{{ openclaw_config_repo }}"
   when:
     - openclaw_git_sync_enabled | bool
-    - openclaw_git_github_token_value is defined
-    - openclaw_git_github_token_value | length > 0
-    - openclaw_config_repo is match('^https://')
-  tags:
-    - openclaw
-    - git
-
-- name: Set effective config repo URL for unauthenticated git operations
-  set_fact:
-    openclaw_git_repo_url_effective: "{{ openclaw_config_repo }}"
-  when:
-    - openclaw_git_sync_enabled | bool
-    - openclaw_git_repo_url_effective is not defined
+    - openclaw_config_repo is defined
   tags:
     - openclaw
     - git
@@ -94,12 +82,15 @@
 - name: Store GitHub token in git credentials
   become: true
   become_user: "{{ openclaw_user }}"
-  copy:
-    dest: "{{ openclaw_home }}/.git-credentials"
+  lineinfile:
+    path: "{{ openclaw_home }}/.git-credentials"
+    regexp: '^https://x-access-token:.*@github.com$'
+    line: "https://x-access-token:{{ openclaw_git_github_token_value }}@github.com"
+    create: true
+    state: present
     owner: "{{ openclaw_user }}"
     group: "{{ openclaw_user }}"
     mode: '0600'
-    content: "https://x-access-token:{{ openclaw_git_github_token_value }}@github.com\n"
   no_log: true
   when:
     - openclaw_git_sync_enabled | bool
@@ -215,7 +206,10 @@
     - openclaw_git_sync_enabled | bool
     - openclaw_git_tmp_clone is defined
     - openclaw_git_tmp_clone.rc | default(1) != 0
-    - (openclaw_git_tmp_clone.stderr | default('')) is search("remote HEAD refers to nonexistent ref")
+    - >-
+      (openclaw_git_tmp_clone.stderr | default('')) is search("remote HEAD refers to nonexistent ref") or
+      (openclaw_git_tmp_clone.stderr | default('')) is search("not a valid object name: 'HEAD'") or
+      (openclaw_git_tmp_clone.stderr | default('')) is search("pathspec 'main'")
   tags:
     - openclaw
     - git
@@ -245,6 +239,7 @@
     openclaw_git_tmp_clone: "{{ openclaw_git_tmp_clone_retry }}"
   when:
     - openclaw_git_tmp_clone_retry is defined
+    - openclaw_git_tmp_clone_retry.after is defined
   tags:
     - openclaw
     - git
@@ -300,7 +295,7 @@
 
 - name: Mark repo availability
   set_fact:
-    openclaw_git_repo_available: "{{ (openclaw_git_dest_clone.rc | default(1)) == 0 }}"
+    openclaw_git_repo_available: "{{ not (openclaw_git_dest_clone.failed | default(false)) }}"
   when: openclaw_git_sync_enabled | bool
   tags:
     - openclaw
@@ -369,7 +364,7 @@
 - name: Check personal workspace files in config repo
   stat:
     path: "{{ openclaw_workspace_repo_path }}/{{ item }}"
-  loop: "{{ openclaw_workspace_personal_files }}"
+  loop: "{{ openclaw_workspace_personal_files | default([]) }}"
   register: openclaw_git_workspace_file_stats
   when:
     - openclaw_git_repo_available | default(false)
@@ -734,7 +729,6 @@
   register: openclaw_git_crontab_bin
   when:
     - openclaw_git_repo_available | default(false)
-    - openclaw_git_cron_enabled | default(false)
   tags:
     - openclaw
     - git
