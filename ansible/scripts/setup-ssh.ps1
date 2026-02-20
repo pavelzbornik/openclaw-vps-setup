@@ -96,7 +96,7 @@ function Test-KeyBasedSsh {
     )
 
     Write-Info "Validating key-based SSH login"
-    & $SshExe -i $PrivateKeyPath -p $Port -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=$TimeoutSeconds ("{0}@{1}" -f $User, $Address) "echo SSH_OK"
+    & $SshExe -i $PrivateKeyPath -p $Port -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=$TimeoutSeconds ("{0}@{1}" -f $User, $Address) "echo SSH_OK"
 
     if ($LASTEXITCODE -ne 0) {
         throw "Key-based SSH validation failed."

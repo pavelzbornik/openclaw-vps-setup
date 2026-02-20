@@ -1,6 +1,6 @@
 all:
   children:
-    test_vms:
+    openclaw_vms:
       hosts:
         ubuntu-target:
           ansible_host: ubuntu-target

@@ -26,6 +26,20 @@
     - nginx
     - lan
 
+- name: Check if SSL certificate and key both exist
+  stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ openclaw_nginx_ssl_cert }}"
+    - "{{ openclaw_nginx_ssl_key }}"
+  register: openclaw_nginx_ssl_check
+  when: openclaw_lan_enabled | default(false)
+  tags:
+    - openclaw
+    - nginx
+    - lan
+    - tls
+
 - name: Generate self-signed certificate for OpenClaw LAN ingress
   command: >-
     openssl req -x509 -nodes -days 1095 -newkey rsa:2048
@@ -33,9 +47,9 @@
     -out {{ openclaw_nginx_ssl_cert }}
     -subj "{{ openclaw_nginx_ssl_subject }}"
     -addext "subjectAltName={{ openclaw_nginx_ssl_san }}"
-  args:
-    creates: "{{ openclaw_nginx_ssl_cert }}"
-  when: openclaw_lan_enabled | default(false)
+  when:
+    - openclaw_lan_enabled | default(false)
+    - not (openclaw_nginx_ssl_check.results | default([]) | map(attribute='stat.exists') | select | list | length == 2)
   tags:
     - openclaw
     - nginx
