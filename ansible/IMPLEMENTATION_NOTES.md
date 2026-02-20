@@ -142,9 +142,9 @@ This lets you validate the playbook safely!
 
 ❌ **SSL/TLS termination**  
 
-- No Nginx reverse proxy
-- Direct connection to OpenClaw on port 3000
-- Add Nginx later if needed
+- Nginx reverse proxy is implemented via `openclaw_gateway_proxy`
+- HTTPS is enabled for LAN ingress with local certificate generation
+- OpenClaw remains loopback-bound behind proxy/firewall rules
 
 ❌ **Auto-rotation of secrets**  
 
@@ -218,7 +218,6 @@ make status       # Check service
 ### Future Enhancements
 
 - [ ] Auto-configure Tailscale with auth key
-- [ ] Add Nginx reverse proxy role
 - [ ] Implement SSL/TLS with Let's Encrypt
 - [ ] Add monitoring role (Prometheus/Grafana)
 - [ ] Create backup/restore playbooks

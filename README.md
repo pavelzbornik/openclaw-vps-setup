@@ -72,7 +72,7 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 ### Prerequisites
 
 - Ubuntu 24.04 VM or VPS with SSH access
-- WSL2 with Ubuntu on Windows host (if using Hyper-V)
+- Windows PowerShell + Docker Desktop (recommended) or Linux/WSL shell
 - Basic Ansible knowledge (optional)
 
 ## 📖 Documentation
@@ -92,6 +92,8 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 
 ## 🔧 Common Commands
 
+Linux/WSL shell:
+
 ```bash
 # Setup SSH access
 cd ansible
@@ -108,6 +110,16 @@ make logs
 
 # Check service status
 make status
+```
+
+Windows PowerShell (no WSL shell):
+
+```powershell
+cd ansible
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\setup-ssh.ps1 -VmAddress 192.168.1.151 -VmUser claw -SshKeyPath "$HOME\.ssh\openclaw_vm_ansible"
+.\scripts\deploy-windows.ps1 -Check
+.\scripts\deploy-windows.ps1
 ```
 
 ## 🔐 Security

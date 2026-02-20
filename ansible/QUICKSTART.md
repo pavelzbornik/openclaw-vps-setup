@@ -1,286 +1,249 @@
 # OpenClaw Ansible - Quick Start Guide
 
-This guide will get you up and running with OpenClaw on your Ubuntu VM or VPS in ~15 minutes.
+This guide shows exactly what to prepare on:
 
-## Prerequisites Checklist
+- the Ubuntu VM (deployment target)
+- the Ansible host machine (where you run Ansible)
 
-- [ ] Ubuntu VM or VPS created and running (example IP: 192.168.100.10)
-- [ ] Ubuntu user created (username: `openclaw`)
-- [ ] SSH enabled on the VM
-- [ ] WSL2 with Ubuntu installed on Windows host (Hyper-V only)
-- [ ] Network connectivity between WSL2 and VM
+The default Windows path below uses PowerShell + Docker (no WSL shell required).
 
-## Step 1: Install Ansible in WSL2 (5 minutes)
+## 1) Prerequisites Checklist
 
-Open WSL2 Ubuntu terminal:
+### VM checklist (Ubuntu target)
+
+- [ ] Ubuntu VM is running and reachable over the network (example: `192.168.1.151`)
+- [ ] SSH server is installed and enabled (`sshd`)
+- [ ] Login user exists (example: `claw`) and has sudo access
+- [ ] At least ~4 GB free disk space on `/` before first full deploy
+- [ ] Optional: Tailscale account ready (if you plan to enable Tailscale)
+
+## 1.1) Setup SSH Server on the VM (Ubuntu)
+
+Run these commands directly in the VM console:
 
 ```bash
-# Update package list
 sudo apt update
-
-# Install Ansible
-sudo apt install -y software-properties-common
-sudo add-apt-repository --yes --update ppa:ansible/ansible
-sudo apt install -y ansible
-
-# Verify installation
-ansible --version
+sudo apt install -y openssh-server
+sudo systemctl enable --now ssh
+sudo systemctl status ssh --no-pager
 ```
 
-Expected output: `ansible [core 2.x.x]`
-
-## Step 2: Clone and Setup Project (2 minutes)
+If UFW is enabled on the VM, allow SSH:
 
 ```bash
-# Navigate to your projects directory
-cd ~
-
-# Clone the repository (or copy the ansible folder)
-# If you already have the openclaw repo:
-cd ~/openclaw/ansible
-
-# Install dependencies
-pip3 install molecule molecule-plugins[docker] ansible-lint
-
-# Install required Ansible collections
-ansible-galaxy collection install -r requirements.yml
+sudo ufw allow OpenSSH
+sudo ufw status
 ```
 
-## Step 3: Setup SSH Access (3 minutes)
+Confirm VM is listening on port 22:
 
 ```bash
-# Run the SSH setup script
+sudo ss -tulpen | grep ':22'
+```
+
+### Ansible host checklist (control machine)
+
+#### Option A (recommended on Windows): PowerShell + Docker
+
+- [ ] Windows PowerShell 5.1+ or PowerShell 7
+- [ ] Docker Desktop installed and running
+- [ ] OpenSSH client tools available (`ssh`, `scp`, `ssh-keygen`)
+- [ ] Repo cloned locally
+
+#### Option B: Linux/WSL shell
+
+- [ ] Linux or WSL Ubuntu
+- [ ] `ansible-core` installed
+- [ ] Python 3.10+
+
+## 2) Configure Inventory
+
+Update `inventory/hosts.yml` with your VM details:
+
+```yaml
+all:
+  children:
+    openclaw_vms:
+      hosts:
+        openclaw-vm:
+          ansible_host: 192.168.1.151
+          ansible_user: claw
+          ansible_ssh_private_key_file: ~/.ssh/openclaw_vm_ansible
+```
+
+## 3) Setup SSH Access
+
+### Windows PowerShell
+
+From repo root:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\ansible\scripts\setup-ssh.ps1 -VmAddress 192.168.1.151 -VmUser claw -SshKeyPath "$HOME\.ssh\openclaw_vm_ansible"
+```
+
+Optional host-side connectivity check before key setup:
+
+```powershell
+Test-NetConnection 192.168.1.151 -Port 22
+```
+
+### Linux/WSL
+
+From `ansible/` directory:
+
+```bash
 chmod +x scripts/setup-ssh.sh
-./scripts/setup-ssh.sh 192.168.100.10 openclaw
+./scripts/setup-ssh.sh 192.168.1.151 claw
 ```
 
-You'll be prompted for the VM password. After this, password-less SSH will be configured.
-
-**Test connectivity:**
+Validate connectivity:
 
 ```bash
 ansible all -i inventory/hosts.yml -m ping
 ```
 
-Expected output: `SUCCESS`
+## 4) Configure Secrets
 
-## Step 4: Configure Secrets (Optional, 2 minutes)
+### Required: Config repo sync settings
 
-### Option A: Environment Variables (Quick)
-
-```bash
-export OPENCLAW_GATEWAY_TOKEN="your-secure-token-here"
-export ANTHROPIC_API_KEY="sk-ant-..."
-export OPENAI_API_KEY="sk-..."
-```
-
-### Option B: Config Repo Sync (Recommended)
-
-The `openclaw_git` role can clone a separate config repo. Update these in
-`group_vars/all.yml`:
+In `group_vars/all.yml`, configure:
 
 - `openclaw_config_repo`
 - `openclaw_git_sync_enabled`
 
-If the repo exists, the role writes `openclaw.json.template` into it.
+### Required: Ansible Vault for `tailscale_authkey` + `OP_SERVICE_ACCOUNT_TOKEN`
 
-### Option C: Edit Configuration Manually
+From `ansible/` directory:
 
-Edit `group_vars/all.yml` and update `openclaw_config` plus `openclaw_env_vars`.
+```powershell
+# 1) Create vault password file (do not commit)
+Set-Content -Path .\.vault_pass.txt -Value "choose-a-strong-password"
 
-### Option D: Use 1Password (Advanced)
+# 2) Create your local vault file from example
+Copy-Item .\group_vars\vault.example.yml .\group_vars\vault.yml
 
-```bash
-export OP_SERVICE_ACCOUNT_TOKEN="ops_your_token_here"
+# 3) Edit the file in VS Code/Notepad and set your real values
+#    (vault_tailscale_authkey and vault_openclaw_op_service_account_token)
+
+# 4) Encrypt using Ansible Vault inside Docker (no local ansible install needed)
+docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault encrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
 ```
 
-## Step 5: Test with Molecule (Optional, 5 minutes)
+Set:
 
-Test the playbook in a Docker container before deploying to your VM:
+- `vault_tailscale_authkey`
+- `vault_openclaw_op_service_account_token`
 
-```bash
-# Full test cycle
-molecule test
+Then deploy (PowerShell + Docker):
+
+```powershell
+.\scripts\deploy-windows.ps1 -VaultPasswordFile .\.vault_pass.txt
 ```
 
-This validates that all roles work correctly.
+Notes:
 
-## Step 6: Deploy to VM (5 minutes)
+- `group_vars/vault.yml` and `.vault_pass.txt` are gitignored.
+- Secret fallbacks are disabled; `vault_openclaw_op_service_account_token` is required.
+- Runtime `.env` values are populated on the VM via `op inject` from 1Password references.
+- Create a 1Password item `OpenClaw / OpenClaw Gateway / credential` for `OPENCLAW_GATEWAY_TOKEN`.
 
-### Dry-run First (Recommended)
+To update vaulted values later:
+
+```powershell
+# Decrypt
+docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault decrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
+
+# Edit group_vars/vault.yml locally, then re-encrypt
+docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault encrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
+```
+
+## 5) Deploy
+
+### Windows (no WSL shell) - recommended
+
+From `ansible/` directory in PowerShell:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\deploy-windows.ps1 -Check
+.\scripts\deploy-windows.ps1
+```
+
+Notes:
+
+- This runs Ansible inside Docker, launched from PowerShell.
+- It uses `windows-deploy-overrides.yml` automatically when present.
+
+### Linux/WSL shell
+
+From `ansible/` directory:
 
 ```bash
-# See what would change
 ./scripts/deploy.sh --check -vv
-```
-
-### Deploy for Real
-
-```bash
-# Deploy everything
 ./scripts/deploy.sh
-
-# Or use Makefile
-make deploy
 ```
 
-Watch the output. The deployment will:
+## 6) Post-Deployment VM Tasks
 
-1. ✓ Update system packages
-2. ✓ Install Node.js + pnpm (via upstream baseline)
-3. ✓ Install 1Password CLI
-4. ✓ Install Docker and configure firewall (if enabled)
-5. ✓ Install Tailscale (if enabled)
-6. ✓ Sync OpenClaw config repo (optional)
-7. ✓ Install OpenClaw via pnpm (upstream)
-8. ✓ Create systemd service
-
-## Step 7: Post-Deployment Configuration (3 minutes)
-
-SSH to your VM:
+SSH into the VM:
 
 ```bash
-ssh -i ~/.ssh/openclaw_vm openclaw@192.168.100.10
+ssh -i ~/.ssh/openclaw_vm_ansible claw@192.168.1.151
 ```
 
-### Configure Tailscale (Important!)
+### Complete Tailscale login (if enabled)
 
 ```bash
-# Authenticate with Tailscale
 sudo tailscale up
-
-# Follow the URL to authenticate
-# Your VM will get a Tailscale IP (100.x.x.x)
+tailscale ip -4
 ```
 
-### Configure OpenClaw Settings
-
-If you are **not** using a config repo, create the files manually:
+### Verify OpenClaw service
 
 ```bash
-mkdir -p ~/.openclaw/config
-nano ~/.openclaw/.env
-nano ~/.openclaw/config/openclaw.json
-```
-
-If you **are** using a config repo, start from the generated template:
-
-```bash
-ls ~/openclaw-config/openclaw.json.template
-```
-
-Save (Ctrl+O, Enter, Ctrl+X)
-
-### Start OpenClaw
-
-```bash
-# Start the service
-sudo systemctl start openclaw
-
-# Check status
 sudo systemctl status openclaw
-
-# View logs
-sudo journalctl -u openclaw -f
+sudo journalctl -u openclaw -n 100 --no-pager
 ```
 
-## Step 8: Access OpenClaw Gateway
-
-From your main machine (connected to Tailscale):
-
-1. Get the VM's Tailscale IP: `ssh openclaw@192.168.100.10 "tailscale ip -4"`
-2. Open browser: `http://<tailscale-ip>:3000`
-3. You should see the OpenClaw Gateway dashboard
-
-## Troubleshooting
-
-### Ansible can't connect to VM
+### Verify gateway process responds
 
 ```bash
-# Test direct SSH
-ssh -i ~/.ssh/openclaw_vm openclaw@192.168.100.10
-
-# Check inventory
-cat inventory/hosts.yml
+which openclaw
+openclaw --version
 ```
 
-### OpenClaw service won't start
+### Verify LAN HTTPS ingress (Nginx)
+
+LAN ingress is opt-in. Enable it per host/group by setting `openclaw_lan_enabled: true` in inventory/group vars and adjust `openclaw_lan_subnet` if your LAN is not `192.168.1.0/24`.
 
 ```bash
-# Check logs
-ssh openclaw@192.168.100.10 "sudo journalctl -u openclaw -n 50"
-
-# Check if OpenClaw is installed
-ssh openclaw@192.168.100.10 "which openclaw"
+sudo systemctl status nginx --no-pager
+sudo ss -tulpen | grep -E ':(80|443)'
+curl -kI https://openclaw.lan
 ```
 
-### Port 3000 not accessible
+## 7) Common Validation Commands
+
+From Ansible host:
 
 ```bash
-# Check if service is listening
-ssh openclaw@192.168.100.10 "sudo ss -tulnp | grep 3000"
-
-# Check firewall
-ssh openclaw@192.168.100.10 "sudo ufw status"
+ansible openclaw_vms -i inventory/hosts.yml -m ping
+ansible-playbook -i inventory/hosts.yml site.yml --check
 ```
 
-### Molecule tests fail
+From VM:
 
 ```bash
-# Check Docker
-docker ps
-
-# Run with debug
-molecule --debug converge
+sudo systemctl is-enabled openclaw
+sudo systemctl is-active openclaw
 ```
 
-## Common Commands
+## Troubleshooting Quick Hits
 
-```bash
-# Deploy specific roles
-make deploy TAGS=openclaw           # Only OpenClaw
-make deploy TAGS=firewall           # Only upstream firewall tasks (if enabled)
+- SSH auth fails: rerun `setup-ssh` and ensure key path in inventory matches your actual private key.
+- `Missing sudo password`: make sure your VM user can `sudo` without interactive prompts for automation.
+- `No space left on device`: clean package cache and verify free disk before rerun.
+- Docker deploy errors on Windows: confirm Docker Desktop is running and file sharing is enabled for the repo drive.
 
-# View logs from VM
-make logs
-
-# Check service status
-make status
-
-# Restart OpenClaw
-make restart
-
-# Create VM snapshot (run on Windows)
-# Checkpoint-VM -Name "OpenClaw-VM" -SnapshotName "pre-config"
-```
-
-## Next Steps
-
-1. **Configure Channels**: Edit `~/.openclaw/config/openclaw.json` to enable Telegram, Discord, etc.
-2. **Add Skills**: Place custom skills in `~/.openclaw/workspace/skills/`
-3. **Home Assistant**: If using HA, configure the integration
-4. **Monitoring**: Set up log monitoring and alerts
-5. **Backups**: Schedule regular Hyper-V snapshots
-
-## Security Checklist
-
-- [ ] Changed default gateway token in config
-- [ ] API keys stored securely (1Password or encrypted)
-- [ ] Tailscale authenticated
-- [ ] Firewall enabled (via upstream tasks if configured)
-- [ ] SSH key-based auth only (no password)
-- [ ] OpenClaw running as non-root user
-- [ ] VM snapshot created before first run
-
-## Help & Support
-
-- Check logs: `make logs`
-- Run diagnostics: `ansible openclaw_vms -i inventory/hosts.yml -m setup`
-- Re-run deployment: `make deploy`
-- Full reset: Create new VM snapshot and restore
-
----
-
-**Estimated Total Time: 15-20 minutes** ⏱️
-
-Enjoy your automated OpenClaw deployment! 🎉
+For more details, see `TROUBLESHOOTING.md`.

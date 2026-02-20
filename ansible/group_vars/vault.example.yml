@@ -1,0 +1,14 @@
+---
+# Copy to group_vars/vault.yml and encrypt with ansible-vault.
+# Example:
+#   cp group_vars/vault.example.yml group_vars/vault.yml
+#   ansible-vault encrypt group_vars/vault.yml
+
+# Used as tailscale_authkey (upstream variable)
+vault_tailscale_authkey: "tskey-auth-REPLACE_ME"  # pragma: allowlist secret
+
+# Used as openclaw_op_service_account_token (for 1Password + openclaw_git role)
+vault_openclaw_op_service_account_token: "ops_REPLACE_ME"  # pragma: allowlist secret
+
+# OPENCLAW_GATEWAY_TOKEN is sourced from 1Password item reference:
+#   op://OpenClaw/OpenClaw Gateway/credential

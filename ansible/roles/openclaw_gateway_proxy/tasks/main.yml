@@ -1,0 +1,195 @@
+---
+# Nginx LAN ingress for OpenClaw gateway.
+# Gateway remains loopback-only; Nginx provides LAN HTTPS access.
+
+- name: Configure OpenClaw LAN nginx ingress
+  when: openclaw_lan_enabled | default(false)
+  block:
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: true
+      tags:
+        - openclaw
+        - nginx
+        - lan
+
+    - name: Ensure nginx SSL directory exists
+      file:
+        path: "{{ openclaw_nginx_ssl_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      tags:
+        - openclaw
+        - nginx
+        - lan
+
+    - name: Check if SSL certificate and key both exist
+      stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ openclaw_nginx_ssl_cert }}"
+        - "{{ openclaw_nginx_ssl_key }}"
+      register: openclaw_gateway_proxy_nginx_ssl_check
+      tags:
+        - openclaw
+        - nginx
+        - lan
+        - tls
+
+    - name: Generate private key for OpenClaw LAN ingress
+      community.crypto.openssl_privatekey:
+        path: "{{ openclaw_nginx_ssl_key }}"
+        type: RSA
+        size: 2048
+        owner: root
+        group: root
+        mode: '0600'
+      when:
+        - openclaw_gateway_proxy_nginx_ssl_check.results is defined
+        - not (openclaw_gateway_proxy_nginx_ssl_check.results | map(attribute='stat.exists') | min)
+      notify: Reload nginx
+      tags:
+        - openclaw
+        - nginx
+        - lan
+        - tls
+
+    - name: Generate CSR for OpenClaw LAN ingress
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ openclaw_nginx_ssl_key }}"
+        common_name: "{{ openclaw_nginx_server_name }}"
+        subject_alt_name:
+          - "{{ openclaw_nginx_ssl_san }}"
+      register: openclaw_gateway_proxy_nginx_ssl_csr
+      when:
+        - openclaw_gateway_proxy_nginx_ssl_check.results is defined
+        - not (openclaw_gateway_proxy_nginx_ssl_check.results | map(attribute='stat.exists') | min)
+      tags:
+        - openclaw
+        - nginx
+        - lan
+        - tls
+
+    - name: Generate self-signed certificate for OpenClaw LAN ingress
+      community.crypto.x509_certificate:
+        path: "{{ openclaw_nginx_ssl_cert }}"
+        csr_content: "{{ openclaw_gateway_proxy_nginx_ssl_csr.csr }}"
+        privatekey_path: "{{ openclaw_nginx_ssl_key }}"
+        provider: selfsigned
+        selfsigned_not_after: "+1095d"
+        owner: root
+        group: root
+        mode: '0644'
+      when:
+        - openclaw_gateway_proxy_nginx_ssl_check.results is defined
+        - not (openclaw_gateway_proxy_nginx_ssl_check.results | map(attribute='stat.exists') | min)
+        - openclaw_gateway_proxy_nginx_ssl_csr is defined
+        - openclaw_gateway_proxy_nginx_ssl_csr.csr is defined
+      notify: Reload nginx
+      tags:
+        - openclaw
+        - nginx
+        - lan
+        - tls
+
+    - name: Deploy OpenClaw nginx reverse proxy config
+      template:
+        src: nginx-openclaw.conf.j2
+        dest: /etc/nginx/conf.d/openclaw.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload nginx
+      tags:
+        - openclaw
+        - nginx
+        - lan
+
+    - name: Disable default nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Reload nginx
+      tags:
+        - openclaw
+        - nginx
+        - lan
+
+    - name: Validate nginx configuration
+      command: nginx -t
+      changed_when: false
+      tags:
+        - openclaw
+        - nginx
+        - lan
+
+    - name: Allow HTTP from LAN subnet
+      community.general.ufw:
+        rule: allow
+        proto: tcp
+        port: '80'
+        src: "{{ openclaw_lan_subnet }}"
+        comment: 'OpenClaw HTTP redirect from LAN'
+      when:
+        - vendor_firewall_enabled | default(false)
+      tags:
+        - openclaw
+        - nginx
+        - firewall
+
+    - name: Allow HTTPS from LAN subnet
+      community.general.ufw:
+        rule: allow
+        proto: tcp
+        port: '443'
+        src: "{{ openclaw_lan_subnet }}"
+        comment: 'OpenClaw HTTPS from LAN'
+      when:
+        - vendor_firewall_enabled | default(false)
+      tags:
+        - openclaw
+        - nginx
+        - firewall
+
+    - name: Allow loopback access to OpenClaw gateway port
+      community.general.ufw:
+        rule: allow
+        insert: 1
+        proto: tcp
+        port: "{{ openclaw_port | string }}"
+        src: "127.0.0.1/32"
+        comment: 'Allow local nginx to reach OpenClaw gateway'
+      when:
+        - vendor_firewall_enabled | default(false)
+      tags:
+        - openclaw
+        - nginx
+        - firewall
+
+    - name: Deny direct OpenClaw gateway port exposure
+      community.general.ufw:
+        rule: deny
+        insert: 2
+        proto: tcp
+        port: "{{ openclaw_port | string }}"
+        comment: 'Block direct OpenClaw gateway access'
+      when:
+        - vendor_firewall_enabled | default(false)
+      tags:
+        - openclaw
+        - firewall
+        - security
+
+    - name: Ensure nginx is enabled and started
+      systemd:
+        name: nginx
+        enabled: true
+        state: started
+      tags:
+        - openclaw
+        - nginx
+        - lan

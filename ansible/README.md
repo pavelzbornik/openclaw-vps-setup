@@ -4,13 +4,25 @@ This directory contains Ansible playbooks and roles for automated provisioning o
 
 ## Prerequisites
 
-### For Production Deployment
+### Target VM (Ubuntu)
 
-- WSL2 with Ubuntu 24.04 (Windows) or a Linux host
-- Ansible core 2.14+ (recommended)
-- Python 3.10+
-- SSH access to target VM
-- Optional: Molecule for testing
+- Ubuntu VM/VPS reachable via SSH (OpenSSH server installed and running)
+- Login user with sudo access (example: `claw`)
+- Python 3 available on VM (`/usr/bin/python3`)
+- Sufficient free disk space for package upgrades
+
+If SSH server is not set up yet, use the VM setup steps in [QUICKSTART.md](QUICKSTART.md) under "Setup SSH Server on the VM (Ubuntu)".
+
+### Ansible Host (Control Node)
+
+Choose one:
+
+- **Windows PowerShell + Docker (recommended, no WSL shell)**
+   - Docker Desktop running
+   - OpenSSH client tools installed (`ssh`, `scp`, `ssh-keygen`)
+- **Linux/WSL shell**
+   - `ansible-core` 2.14+
+   - Python 3.10+
 
 ### For DevContainer Testing (Recommended)
 
@@ -49,21 +61,13 @@ See [.devcontainer/README.md](../.devcontainer/README.md) for complete devcontai
 
 ### Option 2: Production Deployment
 
-### 1. Install Dependencies
+Follow the full step-by-step in [QUICKSTART.md](QUICKSTART.md). In short:
 
-```bash
-# In WSL2
-sudo apt update
-sudo apt install -y software-properties-common
-sudo add-apt-repository --yes --update ppa:ansible/ansible
-sudo apt install -y ansible
-
-# Install Python dependencies for testing
-pip3 install molecule molecule-plugins[docker] ansible-lint
-
-# Install Ansible collections
-ansible-galaxy collection install -r requirements.yml
-```
+1. Configure `inventory/hosts.yml`
+2. Set up SSH keys to the VM
+3. Deploy from either:
+   - `scripts/deploy-windows.ps1` (PowerShell + Docker), or
+   - `scripts/deploy.sh` (Linux/WSL shell)
 
 ### 2. Configure Inventory
 
@@ -90,15 +94,36 @@ ssh-copy-id -i ~/.ssh/openclaw_vm.pub openclaw@192.168.100.10
 ansible openclaw_vms -i inventory/hosts.yml -m ping
 ```
 
-### 4. Configure Secrets
+PowerShell alternative (from repo root):
 
-Set up 1Password service account token:
-
-```bash
-export OP_SERVICE_ACCOUNT_TOKEN="ops_your_token_here"
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\ansible\scripts\setup-ssh.ps1 -VmAddress 192.168.1.151 -VmUser claw -SshKeyPath "$HOME\.ssh\openclaw_vm_ansible"
 ```
 
-Or add to `group_vars/all.yml` (encrypted with ansible-vault).
+### 4. Configure Secrets
+
+This deployment now relies on 1Password for runtime secrets. Use Ansible Vault to provide the 1Password service account token and Tailscale auth key:
+
+```powershell
+cd ansible
+Set-Content -Path .\.vault_pass.txt -Value "choose-a-strong-password"
+Copy-Item .\group_vars\vault.example.yml .\group_vars\vault.yml
+# Edit group_vars\vault.yml locally, then encrypt it via Docker:
+docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault encrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
+```
+
+Set these vaulted vars in `group_vars/vault.yml`:
+
+- `vault_tailscale_authkey`
+- `vault_openclaw_op_service_account_token`
+
+At deploy time, the role renders `.env` with `op://...` references and runs `op inject` on the VM to materialize all runtime secret values.
+
+Required 1Password items/fields for unattended deploys include:
+
+- `OpenClaw / Service Account Auth Token / credential` (for `OP_SERVICE_ACCOUNT_TOKEN`)
+- `OpenClaw / OpenClaw Gateway / credential` (for `OPENCLAW_GATEWAY_TOKEN`)
 
 ### 5. Test with Molecule
 
@@ -109,6 +134,16 @@ molecule test
 ```
 
 ### 6. Deploy to VM
+
+Windows PowerShell + Docker (recommended):
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\deploy-windows.ps1 -Check -VaultPasswordFile .\.vault_pass.txt
+.\scripts\deploy-windows.ps1 -VaultPasswordFile .\.vault_pass.txt
+```
+
+Linux/WSL shell:
 
 ```bash
 # Dry run
@@ -133,7 +168,8 @@ ansible/
 │   ├── common/             # Base system setup
 │   ├── openclaw_vendor_base/ # Wrapper around the official openclaw-ansible submodule
 │   ├── openclaw_git/       # Config repo sync and migration
-│   ├── openclaw/           # OpenClaw installation
+│   ├── openclaw_app/       # OpenClaw config templating and systemd
+│   ├── openclaw_gateway_proxy/ # Nginx HTTPS reverse proxy for LAN ingress
 │   └── onepassword/        # 1Password CLI setup
 ├── molecule/
 │   └── default/            # Molecule test scenario
@@ -147,8 +183,15 @@ ansible/
 - **openclaw_vendor_base**: Wrapper role that invokes tasks from the official openclaw-ansible submodule
 - **common**: Base system packages, timezone, locale
 - **onepassword**: 1Password CLI for secrets management
-- **openclaw_git**: Config repo sync and migration
-- **openclaw**: OpenClaw config templating and systemd unit for unattended deploys
+- **openclaw_git**: Config repo sync, migration, and deployment of personal workspace files from private repo
+- **openclaw_app**: OpenClaw config templating and systemd unit for unattended deploys
+- **openclaw_gateway_proxy**: Nginx HTTPS reverse proxy, LAN allowlist, and firewall rules for local network access
+
+### Personal Workspace Files (Public/Private Split)
+
+- Keep personal workspace markdown files in your private config repository (`openclaw_config_repo`).
+- Default behavior (`openclaw_workspace_source: private_repo`) deploys personal files from private repo `workspace/` to `~/.openclaw/workspace/`.
+- Temporary local staging in this public repo is available at `docs/research/local-config/workspace/` and is gitignored.
 
 ### DevContainer Testing (Recommended)
 
@@ -191,8 +234,6 @@ molecule test
 | **Persistence** | Keeps state | Destroyed after test | Permanent |
 | **Use Case** | Development & debugging | Validation & CI/CD | Actual deployment |
 
-```
-
 ## Testing
 
 Molecule provides automated testing:
@@ -218,8 +259,8 @@ molecule test
 
 1. Create VM snapshot: `ssh windows-host "powershell.exe Checkpoint-VM -Name OpenClaw-VM"`
 2. Test in Molecule: `molecule test`
-3. Dry-run on VM: `ansible-playbook site.yml --check`
-4. Deploy: `ansible-playbook site.yml`
+3. Dry-run on VM: `./scripts/deploy.sh --check -vv` or `./scripts/deploy-windows.ps1 -Check`
+4. Deploy: `./scripts/deploy.sh` or `./scripts/deploy-windows.ps1`
 5. Verify: SSH to VM and check services
 
 ## Maintenance
@@ -250,12 +291,11 @@ ansible-inventory -i inventory/hosts.yml --list
 **1Password secrets not working:**
 
 ```bash
-# Verify service account
-export OP_SERVICE_ACCOUNT_TOKEN="ops_xxx"
+# Verify 1Password access on VM (token comes from ansible-vault variable)
 op vault list
 
-# Test secret read
-op read "op://OpenClaw-Secrets/OpenClaw API Keys/ANTHROPIC_API_KEY"
+# Test inject syntax against a reference
+printf 'TEST=op://OpenClaw/Service Account Auth Token/credential\n' | op inject
 ```
 
 **Molecule tests failing:**
@@ -276,6 +316,6 @@ molecule login
 - SSH keys should have 0600 permissions
 - Never commit secrets to git
 - Use ansible-vault for sensitive variables
-- 1Password service account token should be environment variable
+- 1Password service account token is read from `vault_openclaw_op_service_account_token`
 - UFW is configured by upstream submodule tasks when `vendor_firewall_enabled` is true
 - OpenClaw port exposure depends on upstream firewall rules

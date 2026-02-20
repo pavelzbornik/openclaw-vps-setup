@@ -58,7 +58,11 @@ provisioner:
   #   - Firewall (UFW+Docker) depends on both of the above
   #   - SSH hardening requires sshd_config which doesn't exist in Docker containers
   options:
-    extra-vars: '{"vendor_tailscale_enabled": false, "vendor_docker_enabled": false, "vendor_firewall_enabled": false, "ssh_harden": false}'
+    extra-vars: >-
+      {"vendor_tailscale_enabled": false, "vendor_docker_enabled": false,
+      "vendor_firewall_enabled": false, "ssh_harden": false,
+      "ci_test": true, "openclaw_op_service_account_token": "molecule-test-token-not-for-production",
+      "openclaw_git_cron_enabled": false}
 
 verifier:
   name: ansible

@@ -1,2 +1,7 @@
 .cache/*
 docs/research/
+.venv/*
+.env
+deploy-*.*
+vm-*.*
+openclaw-install/
