@@ -7,6 +7,14 @@
   become: true
 
   pre_tasks:
+    - name: Load optional vaulted variables
+      include_vars:
+        file: "{{ playbook_dir }}/group_vars/vault.yml"
+      no_log: true
+      when: lookup('ansible.builtin.fileglob', playbook_dir + '/group_vars/vault.yml', errors='ignore') | length > 0
+      tags:
+        - always
+
     - name: Display target host information
       debug:
         msg: |
@@ -63,6 +71,13 @@
       tags:
         - openclaw
         - app
+
+    - role: openclaw_gateway_proxy
+      tags:
+        - openclaw
+        - gateway
+        - nginx
+        - lan
 
   post_tasks:
     - name: Verify OpenClaw installation

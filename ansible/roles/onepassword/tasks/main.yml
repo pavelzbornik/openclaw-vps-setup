@@ -39,21 +39,24 @@
   tags:
     - onepassword
 
-- name: Check if OP_SERVICE_ACCOUNT_TOKEN is set
-  debug:
-    msg: "Warning: OP_SERVICE_ACCOUNT_TOKEN environment variable not set. 1Password lookups will not work."
-  when: lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') == ''
+- name: Require OP service account token for 1Password-backed deploy
+  assert:
+    that:
+      - openclaw_op_service_account_token | default('') | length > 0
+    fail_msg: >-
+      OP service account token is required. Set vault_openclaw_op_service_account_token
+      in group_vars/vault.yml and re-run deploy.
   tags:
     - onepassword
 
 - name: Test 1Password connection (if token available)
   command: op vault list
   environment:
-    OP_SERVICE_ACCOUNT_TOKEN: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
   register: onepassword_op_vaults
   changed_when: false
   failed_when: false
-  when: lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') != ''
+  when: openclaw_op_service_account_token | default('') | length > 0
   tags:
     - onepassword
 
@@ -61,7 +64,7 @@
   debug:
     msg: "{{ onepassword_op_vaults.stdout_lines }}"
   when:
-    - lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') != ''
+    - openclaw_op_service_account_token | default('') | length > 0
     - onepassword_op_vaults.rc == 0
   tags:
     - onepassword

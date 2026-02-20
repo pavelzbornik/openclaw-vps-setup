@@ -47,6 +47,10 @@ Common issues and solutions when deploying OpenClaw with Ansible.
    ./scripts/setup-ssh.sh
    ```
 
+   ```powershell
+   .\scripts\setup-ssh.ps1 -VmAddress 192.168.1.151 -VmUser claw -SshKeyPath "$HOME\.ssh\openclaw_vm_ansible"
+   ```
+
 2. Check SSH key permissions:
 
    ```bash
@@ -61,6 +65,53 @@ Common issues and solutions when deploying OpenClaw with Ansible.
    ```
 
 ## Deployment Issues
+
+### "docker: command not found" (Windows deploy)
+
+**Problem**: `deploy-windows.ps1` cannot start because Docker CLI is unavailable.
+
+**Solutions**:
+
+1. Install Docker Desktop and reopen PowerShell.
+2. Verify Docker is running:
+
+   ```powershell
+   docker version
+   ```
+
+3. Re-run deploy:
+
+   ```powershell
+   .\scripts\deploy-windows.ps1 -Check
+   .\scripts\deploy-windows.ps1
+   ```
+
+### "Mount denied" or volume sharing errors (Windows deploy)
+
+**Problem**: Docker cannot mount repository or SSH directory.
+
+**Solutions**:
+
+1. In Docker Desktop, enable file sharing for the drive containing the repo and `%USERPROFILE%\.ssh`.
+2. Ensure the repo is under a local drive path (for example `C:\Github\...`).
+3. Retry from `ansible/` directory:
+
+   ```powershell
+   .\scripts\deploy-windows.ps1
+   ```
+
+### "Missing sudo password"
+
+**Problem**: Ansible `become` requires interactive sudo input.
+
+**Solutions**:
+
+1. Configure passwordless sudo for the automation user on VM.
+2. Validate from VM shell:
+
+   ```bash
+   sudo -n true && echo SUDO_OK
+   ```
 
 ### "Package 'nodejs' has no installation candidate"
 
@@ -158,7 +209,7 @@ Common issues and solutions when deploying OpenClaw with Ansible.
 
 ### "Port 3000 not accessible"
 
-**Problem**: Firewall blocking or service not listening
+**Problem**: Expected with secure defaults. Gateway binds to loopback and is not exposed directly to LAN.
 
 **Solutions**:
 
@@ -168,19 +219,26 @@ Common issues and solutions when deploying OpenClaw with Ansible.
    ssh openclaw@192.168.100.10 "sudo ss -tulnp | grep 3000"
    ```
 
-2. Check UFW rules:
+2. Check Nginx is the LAN ingress:
+
+   ```bash
+   ssh openclaw@192.168.100.10 "sudo systemctl status nginx --no-pager"
+   ssh openclaw@192.168.100.10 "sudo ss -tulpen | grep -E ':(80|443)'"
+   ```
+
+3. Check UFW rules:
 
    ```bash
    ssh openclaw@192.168.100.10 "sudo ufw status verbose"
    ```
 
-3. Temporarily allow all traffic for testing:
+4. Test via HTTPS endpoint instead of direct gateway port:
 
    ```bash
-   ssh openclaw@192.168.100.10 "sudo ufw allow 3000/tcp"
+   curl -kI https://openclaw.lan
    ```
 
-4. Check Tailscale connectivity:
+5. Check Tailscale connectivity:
 
    ```bash
    tailscale ping <vm-tailscale-ip>
@@ -210,21 +268,46 @@ Common issues and solutions when deploying OpenClaw with Ansible.
 
 ### "OP_SERVICE_ACCOUNT_TOKEN not set"
 
-**Problem**: 1Password lookups failing
+**Problem**: 1Password inject step fails because service account token is missing
 
 **Solutions**:
 
-1. Set token before deployment:
+1. Ensure vaulted variable is present:
 
-   ```bash
-   export OP_SERVICE_ACCOUNT_TOKEN="ops_your_token"
-   make deploy
+   ```yaml
+   # group_vars/vault.yml
+   vault_openclaw_op_service_account_token: "ops_your_token"
    ```
 
-2. Or skip 1Password and use environment variables directly:
+2. Re-encrypt and rerun deploy:
+
+   ```powershell
+   docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault encrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
+   .\scripts\deploy-windows.ps1 -VaultPasswordFile .\.vault_pass.txt
+   ```
+
+### "OPENCLAW_GATEWAY_TOKEN missing"
+
+**Problem**: OpenClaw service fails because gateway token was not injected from 1Password.
+
+**Solutions**:
+
+1. Verify 1Password item exists:
+
+   - Vault: `OpenClaw`
+   - Item: `OpenClaw Gateway`
+   - Field: `credential`
+
+2. Confirm rendered environment includes token key on VM:
 
    ```bash
-   make deploy SKIP_TAGS=onepassword
+   ssh openclaw@192.168.100.10 "sudo grep '^OPENCLAW_GATEWAY_TOKEN=' /home/openclaw/.openclaw/.env"
+   ```
+
+3. Re-run config-related tags:
+
+   ```bash
+   ansible-playbook -i inventory/hosts.yml site.yml --tags onepassword,openclaw,app,gateway,nginx,lan
    ```
 
 ## Molecule Issues

@@ -25,13 +25,13 @@ if ! command -v pre-commit &> /dev/null; then
 fi
 
 print_info "Setting up pre-commit hooks..."
-cd /workspaces/openclaw || exit 1
+cd /workspaces/openclaw-vps-setup || exit 1
 
 pre-commit install --install-hooks
 pre-commit autoupdate || print_warn "Could not update pre-commit hooks (network issue?)"
 
 # Navigate to ansible directory
-cd /workspaces/openclaw/ansible || exit 1
+cd /workspaces/openclaw-vps-setup/ansible || exit 1
 
 # Install Ansible Galaxy requirements
 if [ -f "requirements.yml" ]; then

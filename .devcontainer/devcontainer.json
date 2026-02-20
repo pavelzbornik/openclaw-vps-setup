@@ -2,7 +2,7 @@
   "name": "OpenClaw Ansible Development",
   "dockerComposeFile": "docker-compose.yml",
   "service": "ansible-control",
-  "workspaceFolder": "/workspaces/openclaw",
+  "workspaceFolder": "/workspaces/openclaw-vps-setup",
 
   // Disable TTY to prevent ConPTY issues on Windows Insiders
   "containerEnv": {
@@ -15,7 +15,7 @@
   // Environment variables
   "remoteEnv": {
     "TERM": "dumb",
-    "PRE_COMMIT_HOME": "/workspaces/openclaw/.cache/pre-commit"
+    "PRE_COMMIT_HOME": "/workspaces/openclaw-vps-setup/.cache/pre-commit"
     // "OP_SERVICE_ACCOUNT_TOKEN": "${localEnv:OP_SERVICE_ACCOUNT_TOKEN}"
   },
 
@@ -92,6 +92,6 @@
   // Mount the Docker socket for Docker-in-Docker and local cache directories
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=${localWorkspaceFolder}/.cache/pre-commit,target=/workspaces/openclaw/.cache/pre-commit,type=bind,consistency=cached"
+    "source=${localWorkspaceFolder}/.cache/pre-commit,target=/workspaces/openclaw-vps-setup/.cache/pre-commit,type=bind,consistency=cached"
   ]
 }

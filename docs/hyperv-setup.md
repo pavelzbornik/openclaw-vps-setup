@@ -22,9 +22,36 @@ During the Ubuntu installer:
 - Enable OpenSSH server
 - Reboot and verify SSH access
 
-## 4) Prepare WSL2 (Control Node)
+If OpenSSH was not enabled during install, configure it in VM console:
 
-Install WSL2 Ubuntu and Ansible on your Windows host. Then follow the Ansible quickstart:
+```bash
+sudo apt update
+sudo apt install -y openssh-server
+sudo systemctl enable --now ssh
+sudo systemctl status ssh --no-pager
+```
+
+If firewall is enabled:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw status
+```
+
+From Windows host, verify network reachability:
+
+```powershell
+Test-NetConnection <vm-ip> -Port 22
+```
+
+## 4) Prepare Ansible Host (Control Node)
+
+Use one of these paths on your Windows host:
+
+- **Recommended:** PowerShell + Docker Desktop (no WSL shell required)
+- **Alternative:** WSL2 Ubuntu + native Ansible
+
+Then follow the Ansible quickstart:
 
 - [ansible/QUICKSTART.md](../ansible/QUICKSTART.md)
 

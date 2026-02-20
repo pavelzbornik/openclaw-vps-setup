@@ -16,13 +16,53 @@
     - openclaw
     - config
 
-- name: Deploy OpenClaw environment file
+- name: Render OpenClaw environment source with 1Password references
   template:
     src: openclaw.env.j2
-    dest: "{{ openclaw_config_dir }}/.env"
+    dest: "{{ openclaw_config_dir }}/.env.op"
     owner: "{{ openclaw_user }}"
     group: "{{ openclaw_user }}"
     mode: '0600'
+  tags:
+    - openclaw
+    - config
+
+- name: Populate OpenClaw environment file via op inject
+  become: true
+  become_user: "{{ openclaw_user }}"
+  command: >-
+    op inject
+    --in-file "{{ openclaw_config_dir }}/.env.op"
+    --out-file "{{ openclaw_config_dir }}/.env"
+  environment:
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+  no_log: true
+  notify:
+    - Restart openclaw
+  when:
+    - not (ci_test | default(false))
+  tags:
+    - openclaw
+    - config
+    - 1password
+
+- name: Deploy OpenClaw environment file
+  file:
+    path: "{{ openclaw_config_dir }}/.env"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: '0600'
+    state: touch
+  tags:
+    - openclaw
+    - config
+
+- name: Remove temporary OpenClaw environment source file
+  file:
+    path: "{{ openclaw_config_dir }}/.env.op"
+    state: absent
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
   tags:
     - openclaw
     - config
@@ -34,7 +74,9 @@
     owner: "{{ openclaw_user }}"
     group: "{{ openclaw_user }}"
     mode: '0600'
-    force: false
+    force: true
+  notify:
+    - Restart openclaw
   tags:
     - openclaw
     - config
@@ -107,11 +149,13 @@
 - name: Deploy default SOUL.md security rules
   template:
     src: SOUL.md.j2
-    dest: "{{ openclaw_config_dir }}/SOUL.md"
+    dest: "{{ openclaw_config_dir }}/workspace/SOUL.md"
     owner: "{{ openclaw_user }}"
     group: "{{ openclaw_user }}"
     mode: '0640'
     force: false
+  when:
+    - openclaw_workspace_source | default('private_repo') != 'private_repo'
   tags:
     - openclaw
     - security
