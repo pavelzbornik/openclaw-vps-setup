@@ -41,7 +41,7 @@ jobs:
           ANSIBLE_SSH_PRIVATE_KEY: op://OpenClaw/VPS SSH Key/private key  # pragma: allowlist secret
 
       - name: Join Tailscale (ephemeral)
-        uses: tailscale/github-action@4e4c49acaa9818630ce0bd361bf7ef4368b1617a  # v2
+        uses: tailscale/github-action@05c58255396c88c609919d571a8b117099c69020  # v2
         with:
           oauth-client-id: ${{ env.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ env.TAILSCALE_OAUTH_CLIENT_SECRET }}

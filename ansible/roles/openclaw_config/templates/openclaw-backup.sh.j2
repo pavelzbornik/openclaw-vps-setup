@@ -18,12 +18,12 @@ AWS_SECRET_ACCESS_KEY=$(op read "op://{{ openclaw_aws_key_vault }}/{{ openclaw_a
 export AWS_DEFAULT_REGION="{{ openclaw_s3_region }}"
 
 mkdir -p "${BACKUP_DIR}"
-trap "systemctl start openclaw || true" EXIT
+trap 'rm -f "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz" "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz.enc"; systemctl start openclaw || true' EXIT
 systemctl stop openclaw || true
 
 tar -czf "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz" -C "{{ openclaw_home }}" .openclaw
 
-printf '%s' "${PASSPHRASE}" | openssl enc -aes-256-gcm -pbkdf2 \
+printf '%s' "${PASSPHRASE}" | openssl enc -aes-256-cbc -pbkdf2 \
   -in "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz" \
   -out "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz.enc" \
   -pass stdin
