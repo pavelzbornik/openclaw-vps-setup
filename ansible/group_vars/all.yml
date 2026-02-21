@@ -65,13 +65,31 @@ openclaw_run_doctor: false
 onepassword_cli_version: "latest"
 onepassword_cli_deb_url: "https://downloads.1password.com/linux/debian/amd64/stable/1password-cli-amd64-latest.deb"
 
+# Discord allowlist/guilds — override in vault.yml with actual IDs
+openclaw_discord_allowlist: "{{ vault_openclaw_discord_allowlist | default([]) }}"
+openclaw_discord_guilds: "{{ vault_openclaw_discord_guilds | default([]) }}"
+
 # OpenClaw Configuration Template Variables (for unattended deploys)
 openclaw_config:
+  auth:
+    profiles:
+      "openrouter:default":
+        provider: openrouter
+        mode: api_key
   agents:
     defaults:
       workspace: "{{ openclaw_config_dir }}/workspace"
       model:
         primary: "openrouter/anthropic/claude-sonnet-4-6"
+      models:
+        "openrouter/auto":
+          alias: "OpenRouter"
+        "openrouter/anthropic/claude-sonnet-4": {}
+        "openrouter/anthropic/claude-sonnet-4.6": {}
+  commands:
+    native: "auto"
+    nativeSkills: "auto"
+    restart: true
   gateway:
     mode: "local"
     # Keep gateway loopback-only; LAN access goes through Nginx reverse proxy.
@@ -88,9 +106,12 @@ openclaw_config:
     telegram:
       enabled: true
       dmPolicy: "pairing"
+      groupPolicy: "allowlist"
+      streamMode: "partial"
     discord:
       enabled: false
-      dmPolicy: "pairing"
+      groupPolicy: "allowlist"
+      dmPolicy: "allowlist"
 
 # Environment Variables for OpenClaw Service
 openclaw_env_vars:

@@ -12,3 +12,21 @@ vault_openclaw_op_service_account_token: "ops_REPLACE_ME"  # pragma: allowlist s
 
 # OPENCLAW_GATEWAY_TOKEN is sourced from 1Password item reference:
 #   op://OpenClaw/OpenClaw Gateway/credential
+
+# Discord user IDs allowed to DM the bot (wired to openclaw_discord_allowlist in all.yml)
+vault_openclaw_discord_allowlist:
+  - "REPLACE_ME_USER_ID"
+
+# Discord guild IDs the bot is active in (wired to openclaw_discord_guilds in all.yml)
+vault_openclaw_discord_guilds:
+  - "REPLACE_ME_GUILD_ID"
+
+# IDENTITY.md content for agent workspace bootstrap (full file, sensitive — never overwritten after first deploy)
+vault_openclaw_identity_md: |
+  # IDENTITY.md
+  <!-- Replace with agent identity content -->
+
+# USER.md content for agent workspace bootstrap (full file, sensitive — never overwritten after first deploy)
+vault_openclaw_user_md: |
+  # USER.md
+  <!-- Replace with user context content -->
