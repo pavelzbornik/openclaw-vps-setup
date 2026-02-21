@@ -5,6 +5,6 @@
 - [Troubleshooting](../ansible/TROUBLESHOOTING.md)
 - [Hyper-V VM setup](hyperv-setup.md)
 - [Firewall and network controls](firewall.md)
-- [OpenClaw config repo sync](openclaw-config-repo.md)
+- [Backup and restore](backup-restore.md)
 - [Discord Terraform](discord-terraform.md)
 - [Pre-commit setup](PRE_COMMIT_SETUP.md)

@@ -27,8 +27,8 @@ ansible/
 ├── roles/
 │   ├── common/                      # Base system setup
 │   ├── openclaw_vendor_base/        # Wrapper around the official openclaw-ansible submodule
-│   ├── openclaw_git/                # Config repo sync and migration
-│   ├── openclaw_app/                # OpenClaw installation & systemd unit
+│   ├── openclaw_config/             # openclaw.json, .env, systemd service, logrotate
+│   ├── openclaw_gateway_proxy/      # Optional Nginx HTTPS reverse proxy
 │   └── onepassword/                 # 1Password CLI setup
 ├── molecule/
 │   └── default/                     # Molecule testing framework
@@ -64,12 +64,11 @@ This workspace includes the official playbook as a git submodule at <https://git
 This avoids duplicating community work while keeping OpenClaw-specific configuration, systemd service, and 1Password integration local.
 See `ansible/UPSTREAM_OPENCLAW_ANSIBLE.md` for details.
 
-#### 3. OpenClaw Role
+#### 3. openclaw_config Role
 
-- Deploys configuration templates (openclaw.json, .env)
+- Deploys `openclaw.json` and `.env` (via `op inject`)
 - Sets up systemd service
 - Configures log rotation
-- Optional onboarding and doctor commands
 
 #### 4. 1Password Role
 
@@ -77,12 +76,10 @@ See `ansible/UPSTREAM_OPENCLAW_ANSIBLE.md` for details.
 - Tests connection to 1Password vaults
 - Enables secret lookup in playbooks
 
-#### 5. OpenClaw Git Role
+#### 5. openclaw_gateway_proxy Role
 
-- Clones a separate OpenClaw config repo
-- Writes a safe `.gitignore` if missing
-- Generates `openclaw.json.template` for initial setup
-- Optionally migrates workspace content
+- Optional Nginx HTTPS reverse proxy for LAN access
+- Manages TLS certificates and proxy configuration
 
 ### Testing with Molecule
 
@@ -116,7 +113,7 @@ This lets you validate the playbook safely!
 - **Timezone**: Change in `group_vars/all.yml` → `timezone`
 - **Upstream Submodule**: Enable/disable Node.js, Tailscale, Docker, firewall via `vendor_*` flags
 - **Node.js Version**: Change in `group_vars/all.yml` → `nodejs_version`
-- **OpenClaw Configuration**: Edit template in `roles/openclaw_app/templates/openclaw.json.j2` (used for config repo template)
+- **OpenClaw Configuration**: Edit template in `roles/openclaw_config/templates/openclaw.json.j2`
 
 ---
 

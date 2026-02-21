@@ -20,7 +20,7 @@ sudo apt-get install pre-commit
 ### 2. Install the git hook scripts
 
 ```bash
-cd /workspaces/openclaw
+cd /workspaces/openclaw-vps-setup
 pre-commit install
 ```
 
@@ -55,12 +55,7 @@ Terraform hooks are currently disabled in `.pre-commit-config.yaml` to avoid pla
 ### Ansible
 
 - **yamllint**: General YAML linting
-
-`ansible-lint` is disabled in pre-commit due to dependency conflicts. Run it manually when needed:
-
-```bash
-ansible-lint site.yml
-```
+- **ansible-lint**: Lints Ansible playbooks and roles (uses `language: system`; requires ansible-lint installed in PATH)
 
 ### Markdown
 - **markdownlint**: Lints and auto-fixes Markdown files

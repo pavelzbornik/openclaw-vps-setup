@@ -58,7 +58,7 @@ extra_packages:
   - python3-cryptography
 
 # OpenClaw onboarding behavior
-openclaw_app_onboard_install_daemon: false
+openclaw_config_onboard_install_daemon: false
 openclaw_run_doctor: false
 
 # 1Password Configuration

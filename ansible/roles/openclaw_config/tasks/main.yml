@@ -92,7 +92,7 @@
   register: openclaw_config_onboard
   changed_when: "'already' not in openclaw_config_onboard.stdout | lower"
   ignore_errors: true
-  when: openclaw_app_onboard_install_daemon | default(false)
+  when: openclaw_config_onboard_install_daemon | default(false)
   tags:
     - openclaw
     - install

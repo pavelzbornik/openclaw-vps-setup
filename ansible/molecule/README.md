@@ -33,7 +33,7 @@ molecule test -s default
 Tests the complete OpenClaw provisioning on Ubuntu 24.04:
 
 - Creates Docker container with systemd
-- Applies roles: openclaw_vendor_base (wrapper around official submodule tasks), common, onepassword, openclaw_git, openclaw
+- Applies roles: openclaw_vendor_base (wrapper around official submodule tasks), common, onepassword, openclaw_config
 - Verifies installation and configuration
 - Checks service status
 

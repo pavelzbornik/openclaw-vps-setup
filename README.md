@@ -149,8 +149,8 @@ OpenClaw is an autonomous AI personal assistant that connects messaging platform
 1. **openclaw_vendor_base**: Wrapper that invokes the official `openclaw-ansible` submodule tasks
 2. **common**: Base system setup, security packages
 3. **onepassword**: 1Password CLI for secrets management
-4. **openclaw_git**: Config repo sync and migration
-5. **openclaw**: OpenClaw npm installation and systemd unit
+4. **openclaw_config**: Deploys `openclaw.json`, `.env` (via `op inject`), systemd service, and logrotate
+5. **openclaw_gateway_proxy**: Optional Nginx HTTPS reverse proxy for LAN access
 
 ### Testing
 

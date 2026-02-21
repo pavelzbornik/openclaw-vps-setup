@@ -27,11 +27,11 @@ The `openclaw_vendor_base` role selectively includes upstream task files:
 |---|---|
 | `common` | apt dist-upgrade, timezone, locale, extra packages (`python3-pip`, `acl`) |
 | `onepassword` | 1Password CLI installation |
-| `openclaw_git` | Git-backed config sync, workspace/skills migration, systemd backup timer |
-| `openclaw` | Pre-baked config templates + systemd service for unattended deploys |
+| `openclaw_config` | `openclaw.json`, `.env` (via `op inject`), systemd service, logrotate |
+| `openclaw_gateway_proxy` | Optional Nginx HTTPS reverse proxy for LAN access |
 
 Upstream expects users to run `openclaw onboard --install-daemon` manually.
-The local `openclaw` role pre-installs the systemd service and config files so
+The `openclaw_config` role pre-installs the systemd service and config files so
 the deployment is fully automated without interactive steps.
 
 ## How it works
