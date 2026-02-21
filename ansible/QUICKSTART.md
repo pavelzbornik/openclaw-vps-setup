@@ -105,13 +105,6 @@ ansible all -i inventory/hosts.yml -m ping
 
 ## 4) Configure Secrets
 
-### Required: Config repo sync settings
-
-In `group_vars/all.yml`, configure:
-
-- `openclaw_config_repo`
-- `openclaw_git_sync_enabled`
-
 ### Required: Ansible Vault for `tailscale_authkey` + `OP_SERVICE_ACCOUNT_TOKEN`
 
 From `ansible/` directory:

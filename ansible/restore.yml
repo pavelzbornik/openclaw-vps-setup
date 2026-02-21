@@ -1,0 +1,185 @@
+---
+# One-shot OpenClaw migration/restore playbook.
+# Downloads an encrypted backup from S3, decrypts it, and restores the .openclaw directory.
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml restore.yml \
+#     -e openclaw_restore_s3_path=s3://my-bucket/openclaw/openclaw-1234567890.tgz.enc
+#
+# Prerequisites: vault_openclaw_op_service_account_token must be set in vault.
+
+- name: Restore OpenClaw from S3 backup
+  hosts: openclaw_vms
+  become: true
+
+  pre_tasks:
+    - name: Load optional vaulted variables
+      include_vars:
+        file: "{{ playbook_dir }}/group_vars/vault.yml"
+      no_log: true
+      when: lookup('ansible.builtin.fileglob', playbook_dir + '/group_vars/vault.yml', errors='ignore') | length > 0
+      tags:
+        - always
+
+    - name: Assert restore S3 path is provided
+      assert:
+        that:
+          - openclaw_restore_s3_path is defined
+          - openclaw_restore_s3_path | length > 0
+        fail_msg: >-
+          openclaw_restore_s3_path must be set.
+          Pass -e openclaw_restore_s3_path=s3://bucket/prefix/openclaw-TIMESTAMP.tgz.enc
+      tags:
+        - always
+
+  tasks:
+    - name: Install awscli
+      apt:
+        name: awscli
+        state: present
+        update_cache: true
+      tags:
+        - restore
+
+    - name: Fetch decryption passphrase from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_backup_passphrase_vault }}/{{ openclaw_backup_passphrase_item }}/{{ openclaw_backup_passphrase_field }}"
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ vault_openclaw_op_service_account_token }}"
+      register: restore_passphrase
+      changed_when: false
+      no_log: true
+      tags:
+        - restore
+
+    - name: Fetch AWS access key from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_aws_key_vault }}/{{ openclaw_aws_key_item }}/{{ openclaw_aws_access_key_field }}"
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ vault_openclaw_op_service_account_token }}"
+      register: restore_aws_access_key
+      changed_when: false
+      no_log: true
+      tags:
+        - restore
+
+    - name: Fetch AWS secret key from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_aws_key_vault }}/{{ openclaw_aws_key_item }}/{{ openclaw_aws_secret_key_field }}"
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ vault_openclaw_op_service_account_token }}"
+      register: restore_aws_secret_key
+      changed_when: false
+      no_log: true
+      tags:
+        - restore
+
+    - name: Stop openclaw service
+      systemd:
+        name: openclaw
+        state: stopped
+      failed_when: false
+      tags:
+        - restore
+
+    - name: Back up existing .openclaw directory
+      command: >-
+        mv {{ openclaw_config_dir }} {{ openclaw_config_dir }}.pre-restore.bak
+      args:
+        removes: "{{ openclaw_config_dir }}"
+      tags:
+        - restore
+
+    - name: Create restore working directory
+      file:
+        path: /tmp/openclaw-restore
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      tags:
+        - restore
+
+    - name: Download encrypted backup from S3
+      command: >-
+        aws s3 cp {{ openclaw_restore_s3_path }} /tmp/openclaw-restore/openclaw.tgz.enc
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ restore_aws_access_key.stdout }}"
+        AWS_SECRET_ACCESS_KEY: "{{ restore_aws_secret_key.stdout }}"
+        AWS_DEFAULT_REGION: "{{ openclaw_s3_region }}"
+      no_log: true
+      tags:
+        - restore
+
+    - name: Decrypt backup archive
+      shell: >-
+        echo "{{ restore_passphrase.stdout }}" |
+        openssl enc -d -aes-256-cbc -pbkdf2
+        -in /tmp/openclaw-restore/openclaw.tgz.enc
+        -out /tmp/openclaw-restore/openclaw.tgz
+        -pass stdin
+      no_log: true
+      tags:
+        - restore
+
+    - name: Extract backup to openclaw home
+      unarchive:
+        src: /tmp/openclaw-restore/openclaw.tgz
+        dest: "{{ openclaw_home }}"
+        remote_src: true
+      tags:
+        - restore
+
+    - name: Fix ownership of restored .openclaw directory
+      file:
+        path: "{{ openclaw_config_dir }}"
+        owner: "{{ openclaw_user }}"
+        group: "{{ openclaw_user }}"
+        recurse: true
+      tags:
+        - restore
+
+    - name: Run openclaw doctor
+      become: true
+      become_user: "{{ openclaw_user }}"
+      command: "{{ openclaw_home }}/.local/bin/openclaw doctor --non-interactive"
+      environment:
+        PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
+        PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
+        HOME: "{{ openclaw_home }}"
+      register: restore_doctor
+      changed_when: false
+      ignore_errors: true
+      tags:
+        - restore
+
+    - name: Start openclaw service
+      systemd:
+        name: openclaw
+        state: started
+      tags:
+        - restore
+
+    - name: Wait for openclaw to be ready
+      wait_for:
+        port: "{{ openclaw_port }}"
+        timeout: 30
+      tags:
+        - restore
+
+    - name: Remove restore working directory
+      file:
+        path: /tmp/openclaw-restore
+        state: absent
+      tags:
+        - restore
+
+    - name: Display restore summary
+      debug:
+        msg: >-
+          Restore complete. Old state preserved at {{ openclaw_config_dir }}.pre-restore.bak
+      tags:
+        - restore
