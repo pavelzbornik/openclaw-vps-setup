@@ -8,7 +8,7 @@
 
 - name: Get Tailscale IPv4 address for gateway bind
   command: tailscale ip -4
-  register: openclaw_app_tailscale_ip_result
+  register: openclaw_config_tailscale_ip_result
   changed_when: false
   failed_when: false
   when: tailscale_enabled | default(false)
@@ -89,8 +89,8 @@
     PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
     PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
     HOME: "{{ openclaw_home }}"
-  register: openclaw_app_onboard
-  changed_when: "'already' not in openclaw_app_onboard.stdout | lower"
+  register: openclaw_config_onboard
+  changed_when: "'already' not in openclaw_config_onboard.stdout | lower"
   ignore_errors: true
   when: openclaw_app_onboard_install_daemon | default(false)
   tags:
@@ -105,7 +105,7 @@
     PNPM_HOME: "{{ openclaw_home }}/.local/share/pnpm"
     PATH: "{{ openclaw_home }}/.local/bin:{{ openclaw_home }}/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin"
     HOME: "{{ openclaw_home }}"
-  register: openclaw_app_doctor
+  register: openclaw_config_doctor
   changed_when: false
   ignore_errors: true
   when: openclaw_run_doctor | default(false)
@@ -114,12 +114,12 @@
 
 - name: Display OpenClaw doctor output
   debug:
-    msg: "{{ openclaw_app_doctor.stdout_lines }}"
+    msg: "{{ openclaw_config_doctor.stdout_lines }}"
   when:
-    - openclaw_app_doctor is defined
-    - not (openclaw_app_doctor.skipped | default(false))
-    - openclaw_app_doctor.rc | default(1) == 0
-    - openclaw_app_doctor.stdout_lines is defined
+    - openclaw_config_doctor is defined
+    - not (openclaw_config_doctor.skipped | default(false))
+    - openclaw_config_doctor.rc | default(1) == 0
+    - openclaw_config_doctor.stdout_lines is defined
   tags:
     - openclaw
 
@@ -145,21 +145,6 @@
   tags:
     - openclaw
     - systemd
-
-- name: Deploy default SOUL.md security rules
-  template:
-    src: SOUL.md.j2
-    dest: "{{ openclaw_config_dir }}/workspace/SOUL.md"
-    owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_user }}"
-    mode: '0640'
-    force: false
-  when:
-    - openclaw_workspace_source | default('private_repo') != 'private_repo'
-  tags:
-    - openclaw
-    - security
-    - config
 
 - name: Create logrotate configuration for OpenClaw
   copy:

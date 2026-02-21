@@ -1,0 +1,132 @@
+---
+# Deploy OpenClaw daily backup: encrypts .openclaw dir and uploads to S3 via 1Password.
+# Run once after provisioning, or rerun to update the script/schedule.
+#
+# Usage:
+#   ansible-playbook -i inventory/hosts.yml backup.yml
+#
+# Prerequisites: vault_openclaw_op_service_account_token and openclaw_s3_bucket must be set.
+
+- name: Deploy OpenClaw backup cron job
+  hosts: openclaw_vms
+  become: true
+
+  pre_tasks:
+    - name: Load optional vaulted variables
+      include_vars:
+        file: "{{ playbook_dir }}/group_vars/vault.yml"
+      no_log: true
+      when: lookup('ansible.builtin.fileglob', playbook_dir + '/group_vars/vault.yml', errors='ignore') | length > 0
+      tags:
+        - always
+
+    - name: Assert S3 bucket is configured
+      assert:
+        that:
+          - openclaw_s3_bucket is defined
+          - openclaw_s3_bucket | length > 0
+        fail_msg: "openclaw_s3_bucket must be set. Pass -e openclaw_s3_bucket=my-bucket or set it in inventory/vault."
+      tags:
+        - always
+
+    - name: Assert 1Password service account token is configured
+      assert:
+        that:
+          - openclaw_op_service_account_token is defined
+          - openclaw_op_service_account_token | length > 0
+        fail_msg: >-
+          openclaw_op_service_account_token must be set.
+          Pass -e openclaw_op_service_account_token=ops_... or set it via OP_SERVICE_ACCOUNT_TOKEN in the deploy workflow.
+      no_log: true
+      tags:
+        - always
+
+  tasks:
+    - name: Install awscli
+      apt:
+        name: awscli
+        state: present
+        update_cache: true
+      tags:
+        - backup
+
+    - name: Create /etc/openclaw directory
+      file:
+        path: /etc/openclaw
+        state: directory
+        owner: root
+        group: root
+        mode: '0750'
+      tags:
+        - backup
+
+    - name: Create backup staging directory
+      file:
+        path: "{{ openclaw_backup_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      tags:
+        - backup
+
+    - name: Template backup environment file
+      copy:
+        dest: "{{ openclaw_backup_env_file }}"
+        content: |
+          export OP_SERVICE_ACCOUNT_TOKEN={{ openclaw_op_service_account_token }}
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+      tags:
+        - backup
+
+    - name: Template backup script
+      template:
+        src: roles/openclaw_config/templates/openclaw-backup.sh.j2
+        dest: "{{ openclaw_backup_script }}"
+        owner: root
+        group: root
+        mode: '0700'
+      tags:
+        - backup
+
+    - name: Create daily backup cron job
+      cron:
+        name: "openclaw daily backup"
+        hour: "{{ openclaw_backup_cron_hour }}"
+        minute: "{{ openclaw_backup_cron_minute }}"
+        job: "{{ openclaw_backup_script }} >> /var/log/openclaw-backup.log 2>&1"
+        user: root
+        state: present
+      tags:
+        - backup
+
+    - name: Create logrotate configuration for backup log
+      copy:
+        dest: /etc/logrotate.d/openclaw-backup
+        content: |
+          /var/log/openclaw-backup.log {
+              weekly
+              missingok
+              rotate 8
+              compress
+              delaycompress
+              notifempty
+              copytruncate
+          }
+        owner: root
+        group: root
+        mode: '0644'
+      tags:
+        - backup
+
+    - name: Display backup installation summary
+      debug:
+        msg: >-
+          Backup cron job installed, runs daily at
+          {{ openclaw_backup_cron_hour }}:{{ '%02d' | format(openclaw_backup_cron_minute | int) }} UTC.
+          Uploads to s3://{{ openclaw_s3_bucket }}/{{ openclaw_s3_prefix }}/
+      tags:
+        - backup

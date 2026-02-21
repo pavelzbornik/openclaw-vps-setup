@@ -167,8 +167,7 @@ ansible/
 ├── roles/
 │   ├── common/             # Base system setup
 │   ├── openclaw_vendor_base/ # Wrapper around the official openclaw-ansible submodule
-│   ├── openclaw_git/       # Config repo sync and migration
-│   ├── openclaw_app/       # OpenClaw config templating and systemd
+│   ├── openclaw_config/    # OpenClaw config templating and systemd
 │   ├── openclaw_gateway_proxy/ # Nginx HTTPS reverse proxy for LAN ingress
 │   └── onepassword/        # 1Password CLI setup
 ├── molecule/
@@ -183,15 +182,13 @@ ansible/
 - **openclaw_vendor_base**: Wrapper role that invokes tasks from the official openclaw-ansible submodule
 - **common**: Base system packages, timezone, locale
 - **onepassword**: 1Password CLI for secrets management
-- **openclaw_git**: Config repo sync, migration, and deployment of personal workspace files from private repo
-- **openclaw_app**: OpenClaw config templating and systemd unit for unattended deploys
+- **openclaw_config**: OpenClaw config templating (`openclaw.json`, `.env` via `op inject`) and systemd unit for unattended deploys
 - **openclaw_gateway_proxy**: Nginx HTTPS reverse proxy, LAN allowlist, and firewall rules for local network access
 
-### Personal Workspace Files (Public/Private Split)
+Standalone playbooks:
 
-- Keep personal workspace markdown files in your private config repository (`openclaw_config_repo`).
-- Default behavior (`openclaw_workspace_source: private_repo`) deploys personal files from private repo `workspace/` to `~/.openclaw/workspace/`.
-- Temporary local staging in this public repo is available at `docs/research/local-config/workspace/` and is gitignored.
+- **backup.yml**: Deploys a daily cron job that encrypts `.openclaw` and uploads to S3 via 1Password secrets
+- **restore.yml**: One-shot migration/restore — downloads from S3, decrypts, and restores `.openclaw`
 
 ### DevContainer Testing (Recommended)
 

@@ -62,15 +62,10 @@
         - secrets
         - 1password
 
-    - role: openclaw_git
+    - role: openclaw_config
       tags:
         - openclaw
-        - git
-
-    - role: openclaw_app
-      tags:
-        - openclaw
-        - app
+        - config
 
     - role: openclaw_gateway_proxy
       tags:
