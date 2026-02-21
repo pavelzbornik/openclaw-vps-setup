@@ -136,7 +136,7 @@ openclaw_gateway_token_field: "credential"
 # ─── Backup / Restore (S3 + 1Password) ───────────────────────────────────────
 
 # Backup: cron → encrypt → S3 upload
-openclaw_backup_dir: "/tmp/openclaw-backups"
+openclaw_backup_dir: "/var/lib/openclaw/backups"
 openclaw_backup_script: "/usr/local/bin/openclaw-backup.sh"
 openclaw_backup_env_file: "/etc/openclaw/backup.env"
 openclaw_backup_cron_hour: "2"

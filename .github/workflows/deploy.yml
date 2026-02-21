@@ -25,12 +25,12 @@ jobs:
 
     steps:
       - name: Checkout (with submodules)
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           submodules: recursive
 
       - name: Load secrets from 1Password
-        uses: 1password/load-secrets-action@v2
+        uses: 1password/load-secrets-action@581a835fb51b8e7ec56b71cf2ffddd7e68bb25e0  # v2.0.0
         with:
           export-env: true
         env:
@@ -41,7 +41,7 @@ jobs:
           ANSIBLE_SSH_PRIVATE_KEY: op://OpenClaw/VPS SSH Key/private key  # pragma: allowlist secret
 
       - name: Join Tailscale (ephemeral)
-        uses: tailscale/github-action@v2
+        uses: tailscale/github-action@4e4c49acaa9818630ce0bd361bf7ef4368b1617a  # v2
         with:
           oauth-client-id: ${{ env.TAILSCALE_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ env.TAILSCALE_OAUTH_CLIENT_SECRET }}

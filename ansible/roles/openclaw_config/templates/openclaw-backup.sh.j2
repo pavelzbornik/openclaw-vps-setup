@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Source 1Password service account auth
+# Source 1Password service account auth and export for child processes
 # shellcheck source=/dev/null
 source {{ openclaw_backup_env_file }}
+export OP_SERVICE_ACCOUNT_TOKEN
 
 TIMESTAMP=$(date +%s)
 BACKUP_DIR="{{ openclaw_backup_dir }}"
@@ -17,12 +18,12 @@ AWS_SECRET_ACCESS_KEY=$(op read "op://{{ openclaw_aws_key_vault }}/{{ openclaw_a
 export AWS_DEFAULT_REGION="{{ openclaw_s3_region }}"
 
 mkdir -p "${BACKUP_DIR}"
-systemctl stop openclaw
-trap "systemctl start openclaw" EXIT
+trap "systemctl start openclaw || true" EXIT
+systemctl stop openclaw || true
 
 tar -czf "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz" -C "{{ openclaw_home }}" .openclaw
 
-echo "${PASSPHRASE}" | openssl enc -aes-256-cbc -pbkdf2 \
+printf '%s' "${PASSPHRASE}" | openssl enc -aes-256-gcm -pbkdf2 \
   -in "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz" \
   -out "${BACKUP_DIR}/openclaw-${TIMESTAMP}.tgz.enc" \
   -pass stdin

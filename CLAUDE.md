@@ -15,7 +15,7 @@ All Ansible commands run from the `ansible/` directory (or use `make` targets wh
 cd ansible && molecule test
 
 # Lint playbooks
-ansible-lint ansible/site.yml
+cd ansible && ansible-lint site.yml
 
 # Dry-run deployment
 cd ansible && make check

@@ -141,7 +141,7 @@ EOF
 # Fix docker socket group so the vscode user can reach Docker without sudo.
 # The socket is created with group root on some WSL/devcontainer setups;
 # molecule and pre-commit hooks won't use sudo, so fix it here once.
-if [ -S /var/run/docker.sock ] && ! docker ps &>/dev/null 2>&1; then
+if [ -S /var/run/docker.sock ] && ! docker ps &>/dev/null; then
     sudo chgrp docker /var/run/docker.sock 2>/dev/null || true
 fi
 
@@ -227,8 +227,9 @@ fi
 print_info "Installing Claude Code CLI..."
 install_claude_cli || print_warn "Claude Code CLI installation skipped/failed; continuing setup."
 # Add claude convenience alias
-echo 'alias cclaude="claude --dangerously-skip-permissions"' >> ~/.bashrc || true
-echo 'alias cclaude="claude --dangerously-skip-permissions"' >> ~/.zshrc || true
+CCLAUDE_ALIAS='alias cclaude="claude --dangerously-skip-permissions"'
+grep -qF 'alias cclaude' ~/.bashrc 2>/dev/null || echo "$CCLAUDE_ALIAS" >> ~/.bashrc || true
+grep -qF 'alias cclaude' ~/.zshrc 2>/dev/null || echo "$CCLAUDE_ALIAS" >> ~/.zshrc || true
 
 
 # Print completion message

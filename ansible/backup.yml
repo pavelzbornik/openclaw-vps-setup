@@ -29,6 +29,18 @@
       tags:
         - always
 
+    - name: Assert 1Password service account token is configured
+      assert:
+        that:
+          - openclaw_op_service_account_token is defined
+          - openclaw_op_service_account_token | length > 0
+        fail_msg: >-
+          openclaw_op_service_account_token must be set.
+          Pass -e openclaw_op_service_account_token=ops_... or set it via OP_SERVICE_ACCOUNT_TOKEN in the deploy workflow.
+      no_log: true
+      tags:
+        - always
+
   tasks:
     - name: Install awscli
       apt:
@@ -48,11 +60,21 @@
       tags:
         - backup
 
+    - name: Create backup staging directory
+      file:
+        path: "{{ openclaw_backup_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      tags:
+        - backup
+
     - name: Template backup environment file
       copy:
         dest: "{{ openclaw_backup_env_file }}"
         content: |
-          OP_SERVICE_ACCOUNT_TOKEN={{ vault_openclaw_op_service_account_token }}
+          export OP_SERVICE_ACCOUNT_TOKEN={{ openclaw_op_service_account_token }}
         owner: root
         group: root
         mode: '0600'
