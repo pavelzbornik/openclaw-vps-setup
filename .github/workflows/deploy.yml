@@ -1,0 +1,90 @@
+---
+# Manual deployment to the production VPS via Tailscale + 1Password.
+#
+# Prerequisites (set once in repo Settings):
+#   Variables:  VPS_HOST  — Tailscale IP or MagicDNS hostname of the VPS
+#   Secrets:    OP_SERVICE_ACCOUNT_TOKEN — 1Password service account token
+#
+# All other secrets (SSH key, Tailscale credentials) are fetched from
+# 1Password at runtime using the service account token above.
+#
+# 1Password items required in the OpenClaw vault:
+#   "Tailscale OAuth"  — fields: client_id, client_secret  (OAuth API client)
+#   "Tailscale"        — field:  credential                 (VPS auth key)
+#   "VPS SSH Key"      — field:  private key
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Load secrets from 1Password
+        uses: 1password/load-secrets-action@v2
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          TAILSCALE_OAUTH_CLIENT_ID: op://OpenClaw/Tailscale OAuth/client_id  # pragma: allowlist secret
+          TAILSCALE_OAUTH_CLIENT_SECRET: op://OpenClaw/Tailscale OAuth/client_secret  # pragma: allowlist secret
+          TAILSCALE_VPS_AUTHKEY: op://OpenClaw/Tailscale/credential  # pragma: allowlist secret
+          ANSIBLE_SSH_PRIVATE_KEY: op://OpenClaw/VPS SSH Key/private key  # pragma: allowlist secret
+
+      - name: Join Tailscale (ephemeral)
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ env.TAILSCALE_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ env.TAILSCALE_OAUTH_CLIENT_SECRET }}
+          tags: tag:ci
+          args: --accept-routes
+
+      - name: Install Ansible
+        run: |
+          pip install --quiet ansible-core==2.18.4
+          ansible-galaxy collection install -r ansible/requirements.yml -q
+
+      - name: Write SSH key
+        run: |
+          echo "$ANSIBLE_SSH_PRIVATE_KEY" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+
+      - name: Write inventory
+        run: |
+          cat > /tmp/inventory.yml << EOF
+          all:
+            hosts:
+              openclaw-vm:
+                ansible_host: ${{ vars.VPS_HOST }}
+                ansible_user: claw
+                ansible_ssh_private_key_file: /tmp/deploy_key
+                ansible_python_interpreter: /usr/bin/python3
+            vars:
+              ansible_connection: ssh
+              ansible_ssh_common_args: >-
+                -o StrictHostKeyChecking=no
+                -o UserKnownHostsFile=/dev/null
+          EOF
+
+      - name: Deploy
+        run: |
+          ansible-playbook \
+            -i /tmp/inventory.yml \
+            ansible/site.yml \
+            -e tailscale_authkey="$TAILSCALE_VPS_AUTHKEY" \
+            -e openclaw_op_service_account_token="$OP_SERVICE_ACCOUNT_TOKEN"
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: Cleanup
+        if: always()
+        run: rm -f /tmp/deploy_key /tmp/inventory.yml

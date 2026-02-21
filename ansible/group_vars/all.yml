@@ -15,7 +15,7 @@ openclaw_config_dir: "{{ openclaw_home }}/.openclaw"
 openclaw_port: 3000
 
 # LAN ingress (Nginx)
-openclaw_lan_enabled: false
+openclaw_lan_enabled: true
 openclaw_lan_subnet: "192.168.1.0/24"
 openclaw_nginx_server_name: "openclaw.lan"
 openclaw_nginx_ssl_dir: "/etc/nginx/ssl"
@@ -37,20 +37,10 @@ openclaw_install_mode: "release"
 #   - "ssh-ed25519 AAAA... user@host"
 openclaw_ssh_keys: []
 
-# ─── Vendor base controls ───────────────────────────────────────────
-# These drive the openclaw_vendor_base role which reuses upstream task files.
-vendor_system_tools_enabled: true
-vendor_user_enabled: true
-vendor_nodejs_enabled: true
-vendor_tailscale_enabled: true
-vendor_docker_enabled: true
-vendor_firewall_enabled: true
-vendor_openclaw_install_enabled: true
-
 # Tailscale (upstream variable — set to true to install)
 tailscale_enabled: true
-# Store in ansible-vault as vault_tailscale_authkey (see group_vars/vault.example.yml)
-tailscale_authkey: "{{ vault_tailscale_authkey | default('', true) }}"
+# Pass via -e tailscale_authkey=... (workflow fetches from 1Password at runtime)
+tailscale_authkey: ""
 
 # CI test mode — skips systemd/Docker tasks (upstream variable)
 ci_test: false
@@ -63,7 +53,6 @@ ssh_harden: true
 
 # Extra packages not covered by upstream system-tools
 extra_packages:
-  - python3-pip
   - acl
   - rsync
   - python3-cryptography
@@ -108,8 +97,8 @@ openclaw_env_vars:
   NODE_ENV: "production"
 
 # 1Password service account token (reused by backup.yml and openclaw_config role)
-# Store in ansible-vault as vault_openclaw_op_service_account_token
-openclaw_op_service_account_token: "{{ vault_openclaw_op_service_account_token | default('', true) }}"  # pragma: allowlist secret
+# Pass via -e openclaw_op_service_account_token=... (workflow injects from OP_SERVICE_ACCOUNT_TOKEN)
+openclaw_op_service_account_token: ""  # pragma: allowlist secret
 openclaw_op_service_account_token_vault: "OpenClaw"  # pragma: allowlist secret
 openclaw_op_service_account_token_item: "Service Account Auth Token"  # pragma: allowlist secret
 openclaw_op_service_account_token_field: "credential"  # pragma: allowlist secret

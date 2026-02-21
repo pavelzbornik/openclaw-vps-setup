@@ -135,7 +135,7 @@
         src: "{{ openclaw_lan_subnet }}"
         comment: 'OpenClaw HTTP redirect from LAN'
       when:
-        - vendor_firewall_enabled | default(false)
+        - vendor_firewall_enabled | default(true)
       tags:
         - openclaw
         - nginx
@@ -149,7 +149,7 @@
         src: "{{ openclaw_lan_subnet }}"
         comment: 'OpenClaw HTTPS from LAN'
       when:
-        - vendor_firewall_enabled | default(false)
+        - vendor_firewall_enabled | default(true)
       tags:
         - openclaw
         - nginx
@@ -164,7 +164,7 @@
         src: "127.0.0.1/32"
         comment: 'Allow local nginx to reach OpenClaw gateway'
       when:
-        - vendor_firewall_enabled | default(false)
+        - vendor_firewall_enabled | default(true)
       tags:
         - openclaw
         - nginx
@@ -178,7 +178,7 @@
         port: "{{ openclaw_port | string }}"
         comment: 'Block direct OpenClaw gateway access'
       when:
-        - vendor_firewall_enabled | default(false)
+        - vendor_firewall_enabled | default(true)
       tags:
         - openclaw
         - firewall
