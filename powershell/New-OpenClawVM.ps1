@@ -32,8 +32,10 @@
 .PARAMETER VHDXSizeBytes
     VM disk size. Default: 32 GB
 
-.PARAMETER VmRootPath
-    Directory where VM files are stored. Default: C:\HyperV\OpenClaw
+.PARAMETER ImageCachePath
+    Directory where the Ubuntu cloud image is cached. The VM's VHDX is always placed
+    at Hyper-V's DefaultVirtualHardDiskPath (controlled by Hyper-V settings, not this script).
+    Default: C:\HyperV\OpenClaw\_images
 
 .PARAMETER SshPublicKeyPath
     Path to SSH public key. If absent a new key pair is generated at
@@ -62,7 +64,7 @@ param(
     [UInt64]$MemoryStartupBytes = 4GB,
     [int]$ProcessorCount = 2,
     [UInt64]$VHDXSizeBytes = 32GB,
-    [string]$VmRootPath = 'C:\HyperV\OpenClaw',
+    [string]$ImageCachePath = 'C:\HyperV\OpenClaw\_images',
     [string]$SshPublicKeyPath = "$HOME\.ssh\openclaw_vm_ansible.pub"
 )
 
@@ -95,9 +97,9 @@ function Resolve-SshKey {
         New-Item -Path $sshDir -ItemType Directory -Force | Out-Null
         $keygen = Get-Command ssh-keygen -ErrorAction Stop
         # -N '' sets an empty passphrase (no quotes needed on Linux; empty string works on Windows OpenSSH)
-        & $keygen.Source -t ed25519 -q -C 'openclaw-vm-ansible' -f $privateKeyPath -N '' 2>&1 | Out-Null
+        $keygenOutput = & $keygen.Source -t ed25519 -q -C 'openclaw-vm-ansible' -f $privateKeyPath -N '' 2>&1
         if (-not (Test-Path $SshPublicKeyPath)) {
-            throw "ssh-keygen failed — key not found at $SshPublicKeyPath"
+            throw "ssh-keygen failed — key not found at $SshPublicKeyPath`n$keygenOutput"
         }
     }
     return @{
@@ -170,7 +172,7 @@ Write-Done "SSH public key: $SshPublicKeyPath"
 . (Join-Path $vendorRoot 'Get-UbuntuImage.ps1')
 . (Join-Path $vendorRoot 'New-VMFromUbuntuImage.ps1')
 
-$imageCache = Join-Path $VmRootPath '_images'
+$imageCache = $ImageCachePath
 New-Item -Path $imageCache -ItemType Directory -Force | Out-Null
 
 Write-Step "Downloading Ubuntu 24.04 cloud image (cached after first run)"

@@ -44,7 +44,7 @@ The script:
 | `-MemoryStartupBytes` | `4 GB` | VM RAM |
 | `-ProcessorCount` | `2` | vCPU count |
 | `-VHDXSizeBytes` | `32 GB` | Disk size |
-| `-VmRootPath` | `C:\HyperV\OpenClaw` | VM file storage directory |
+| `-ImageCachePath` | `C:\HyperV\OpenClaw\_images` | Directory for cached Ubuntu cloud image |
 | `-SshPublicKeyPath` | `~/.ssh/openclaw_vm_ansible.pub` | SSH public key; auto-generated if absent |
 
 ## After VM Creation
