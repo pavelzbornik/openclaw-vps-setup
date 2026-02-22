@@ -9,6 +9,9 @@ The default Windows path below uses PowerShell + Docker (no WSL shell required).
 
 ## 1) Prerequisites Checklist
 
+> **Hyper-V users**: Skip manual VM setup — run `.\powershell\New-OpenClawVM.ps1` from the
+> repository root (Admin PowerShell). See [docs/hyperv-setup.md](../docs/hyperv-setup.md).
+
 ### VM checklist (Ubuntu target)
 
 - [ ] Ubuntu VM is running and reachable over the network (example: `192.168.1.151`)
