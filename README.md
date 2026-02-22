@@ -19,7 +19,7 @@ This repo packages the infrastructure and automation needed to install OpenClaw 
 ## 📁 Repository Structure
 
 ```
-openclaw/
+openclaw-vps-setup/
 ├── ansible/                    # Ansible provisioning (⭐ START HERE)
 │   ├── README.md              # Full documentation
 │   ├── QUICKSTART.md          # Step-by-step guide
@@ -31,12 +31,12 @@ openclaw/
 │   ├── New-OpenClawVM.ps1     # One-command Hyper-V VM creator
 │   └── vendor/
 │       └── Hyper-V-Automation/ # fdcastel/Hyper-V-Automation submodule
-├── terraform/                 # Discord IaC (optional)
-└── docs/                      # Project guides and references
-    ├── README.md              # Docs index
+├── .devcontainer/              # VS Code DevContainer (control + target nodes)
+├── terraform/                  # Discord IaC (optional)
+└── docs/                       # Project guides and references
+    ├── README.md               # Docs index
     ├── hyperv-setup.md         # Hyper-V VM setup (automated)
     ├── firewall.md             # Firewall and network controls
-    ├── openclaw-config-repo.md # Git sync guidance
     └── discord-terraform.md    # Discord setup overview
 ```
 
@@ -64,19 +64,20 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 
 ### What This Does
 
+- ✅ Creates Hyper-V Ubuntu VM in one command (via `fdcastel/Hyper-V-Automation` submodule)
 - ✅ Provisions Ubuntu VM with Node.js (via the official `openclaw-ansible` submodule)
 - ✅ Installs OpenClaw natively (no Docker runtime)
 - ✅ Configures firewall via upstream role (optional)
 - ✅ Sets up Tailscale VPN (optional)
 - ✅ Installs 1Password CLI for secrets management
-- ✅ Syncs an OpenClaw config repo (optional)
 - ✅ Creates a systemd service for OpenClaw
 - ✅ Includes Molecule and devcontainer testing
 
 ### Prerequisites
 
-- Ubuntu 24.04 VM or VPS with SSH access
-- Windows PowerShell + Docker Desktop (recommended) or Linux/WSL shell
+- **Hyper-V (Windows)**: Windows 11 with Hyper-V enabled + Admin PowerShell — VM created automatically
+- **VPS / existing VM**: Ubuntu 24.04 with SSH access
+- Windows PowerShell + Docker Desktop (for Ansible) or Linux/WSL shell
 - Basic Ansible knowledge (optional)
 
 ## 📖 Documentation
@@ -90,7 +91,7 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 | [docs/README.md](docs/README.md) | Documentation index |
 | [docs/hyperv-setup.md](docs/hyperv-setup.md) | Hyper-V VM setup (automated) |
 | [docs/firewall.md](docs/firewall.md) | Firewall and network controls |
-| [docs/openclaw-config-repo.md](docs/openclaw-config-repo.md) | Config repo sync guidance |
+| [docs/backup-restore.md](docs/backup-restore.md) | Backup and restore guide |
 | [docs/discord-terraform.md](docs/discord-terraform.md) | Discord IaC overview |
 | [docs/PRE_COMMIT_SETUP.md](docs/PRE_COMMIT_SETUP.md) | Pre-commit hooks setup and usage |
 
@@ -168,7 +169,8 @@ OpenClaw is an autonomous AI personal assistant that connects messaging platform
 ## 🎯 Design Decisions
 
 - **Native installation** (not Docker): OpenClaw runs directly on the VM
-- **Upstream submodule**: Extend the official openclaw-ansible playbook for Node.js/Tailscale/firewall
+- **Hyper-V automation submodule**: `fdcastel/Hyper-V-Automation` replaces custom VM provisioning scripts
+- **Upstream Ansible submodule**: Extend the official openclaw-ansible playbook for Node.js/Tailscale/firewall
 - **Molecule testing**: Validate playbooks in containers before production
 - **1Password integration**: Secrets management without committing to git
 - **systemd service**: Automatic startup and restart on failure
