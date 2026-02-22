@@ -99,6 +99,9 @@ openclaw_config:
       - "127.0.0.1"
     mdns:
       enabled: false
+    tailscale:
+      mode: "off"
+      resetOnExit: false
     auth:
       mode: "token"
       token: "${OPENCLAW_GATEWAY_TOKEN}"
