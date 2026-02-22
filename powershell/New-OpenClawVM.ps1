@@ -69,6 +69,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Validate VmUser is a safe Linux username before it is embedded in remote shell commands
+if ($VmUser -notmatch '^[a-z_][a-z0-9_-]*$') {
+    throw "VmUser must be a valid Linux username (lowercase letters, digits, hyphens, underscores; no spaces or special characters)"
+}
+
 $vendorRoot = Join-Path $PSScriptRoot 'vendor\Hyper-V-Automation'
 
 function Write-Step {
@@ -82,14 +87,15 @@ function Write-Done {
 }
 
 # ── Resolve SSH keypair ────────────────────────────────────────────────────────
-function Get-OrCreate-SshKey {
+function Resolve-SshKey {
     $privateKeyPath = [System.IO.Path]::ChangeExtension($SshPublicKeyPath, $null).TrimEnd('.')
     if (-not (Test-Path $SshPublicKeyPath)) {
         Write-Step "SSH public key not found — generating new ED25519 keypair"
         $sshDir = Split-Path -Parent $SshPublicKeyPath
         New-Item -Path $sshDir -ItemType Directory -Force | Out-Null
         $keygen = Get-Command ssh-keygen -ErrorAction Stop
-        & $keygen.Source -t ed25519 -q -C 'openclaw-vm-ansible' -f $privateKeyPath -N '""' 2>&1 | Out-Null
+        # -N '' sets an empty passphrase (no quotes needed on Linux; empty string works on Windows OpenSSH)
+        & $keygen.Source -t ed25519 -q -C 'openclaw-vm-ansible' -f $privateKeyPath -N '' 2>&1 | Out-Null
         if (-not (Test-Path $SshPublicKeyPath)) {
             throw "ssh-keygen failed — key not found at $SshPublicKeyPath"
         }
@@ -120,15 +126,15 @@ function New-ClawUser {
     $sshExe = (Get-Command ssh -ErrorAction Stop).Source
     $cmd = @"
 set -e
-id $VmUser 2>/dev/null || useradd -m -s /bin/bash $VmUser
-usermod -aG sudo $VmUser
-mkdir -p /home/$VmUser/.ssh
-cp /root/.ssh/authorized_keys /home/$VmUser/.ssh/authorized_keys
-chown -R ${VmUser}:${VmUser} /home/$VmUser/.ssh
-chmod 700 /home/$VmUser/.ssh
-chmod 600 /home/$VmUser/.ssh/authorized_keys
-printf '%s ALL=(ALL) NOPASSWD:ALL\n' $VmUser > /etc/sudoers.d/$VmUser
-chmod 440 /etc/sudoers.d/$VmUser
+id "$VmUser" 2>/dev/null || useradd -m -s /bin/bash "$VmUser"
+usermod -aG sudo "$VmUser"
+mkdir -p "/home/$VmUser/.ssh"
+cp /root/.ssh/authorized_keys "/home/$VmUser/.ssh/authorized_keys"
+chown -R "${VmUser}:${VmUser}" "/home/$VmUser/.ssh"
+chmod 700 "/home/$VmUser/.ssh"
+chmod 600 "/home/$VmUser/.ssh/authorized_keys"
+printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$VmUser" > "/etc/sudoers.d/$VmUser"
+chmod 440 "/etc/sudoers.d/$VmUser"
 "@
     & $sshExe `
         -i $PrivateKeyPath `
@@ -157,7 +163,7 @@ function Resolve-VmIp {
 # ── Main ───────────────────────────────────────────────────────────────────────
 Import-Module Hyper-V -ErrorAction Stop
 
-$keys = Get-OrCreate-SshKey
+$keys = Resolve-SshKey
 Write-Done "SSH public key: $SshPublicKeyPath"
 
 # Import library scripts from submodule
@@ -184,10 +190,11 @@ $newVmParams = @{
 }
 
 if (-not [string]::IsNullOrWhiteSpace($IPAddress)) {
-    $newVmParams['IPAddress'] = $IPAddress
-    if (-not [string]::IsNullOrWhiteSpace($Gateway)) {
-        $newVmParams['Gateway'] = $Gateway
+    if ([string]::IsNullOrWhiteSpace($Gateway)) {
+        throw "-Gateway is required when -IPAddress is specified"
     }
+    $newVmParams['IPAddress'] = $IPAddress
+    $newVmParams['Gateway'] = $Gateway
 }
 
 New-VMFromUbuntuImage @newVmParams

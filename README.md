@@ -88,7 +88,7 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 | [ansible/TROUBLESHOOTING.md](ansible/TROUBLESHOOTING.md) | Problem solving guide |
 | [ansible/IMPLEMENTATION_NOTES.md](ansible/IMPLEMENTATION_NOTES.md) | Critical configuration notes |
 | [docs/README.md](docs/README.md) | Documentation index |
-| [docs/hyperv-setup.md](docs/hyperv-setup.md) | Hyper-V VM checklist |
+| [docs/hyperv-setup.md](docs/hyperv-setup.md) | Hyper-V VM setup (automated) |
 | [docs/firewall.md](docs/firewall.md) | Firewall and network controls |
 | [docs/openclaw-config-repo.md](docs/openclaw-config-repo.md) | Config repo sync guidance |
 | [docs/discord-terraform.md](docs/discord-terraform.md) | Discord IaC overview |
