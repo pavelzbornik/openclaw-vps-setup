@@ -81,6 +81,46 @@
     - openclaw
     - config
 
+- name: Create OpenClaw workspace directory
+  ansible.builtin.file:
+    path: "{{ openclaw_config.agents.defaults.workspace }}"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: '0750'
+  tags:
+    - openclaw
+    - config
+    - workspace
+
+- name: Bootstrap IDENTITY.md (first deploy only)
+  ansible.builtin.copy:
+    content: "{{ vault_openclaw_identity_md }}"
+    dest: "{{ openclaw_config.agents.defaults.workspace }}/IDENTITY.md"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: '0640'
+    force: false
+  when: vault_openclaw_identity_md | default('') | length > 0
+  tags:
+    - openclaw
+    - config
+    - workspace
+
+- name: Bootstrap USER.md (first deploy only)
+  ansible.builtin.copy:
+    content: "{{ vault_openclaw_user_md }}"
+    dest: "{{ openclaw_config.agents.defaults.workspace }}/USER.md"
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: '0640'
+    force: false
+  when: vault_openclaw_user_md | default('') | length > 0
+  tags:
+    - openclaw
+    - config
+    - workspace
+
 - name: Run OpenClaw onboarding to install daemon
   become: true
   become_user: "{{ openclaw_user }}"

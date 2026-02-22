@@ -1,35 +1,72 @@
 {
-  "agents": {
-    "defaults": {
-      "workspace": "{{ openclaw_config.agents.defaults.workspace }}",
-      "model": {
-        "primary": "{{ openclaw_config.agents.defaults.model.primary }}"
+  "auth": {
+    "profiles": {
+      "openrouter:default": {
+        "provider": "openrouter",
+        "mode": "api_key"
       }
     }
   },
-  "gateway": {
-    "mode": "{{ openclaw_config.gateway.mode }}",
-    "bind": "{{ openclaw_config.gateway.bind }}",
-    "port": {{ openclaw_config.gateway.port }},
-    "trustedProxies": {{ openclaw_config.gateway.trustedProxies | to_json }},
-    "mdns": {
-      "enabled": {{ openclaw_config.gateway.mdns.enabled | lower }}
-    },
-    "auth": {
-      "mode": "{{ openclaw_config.gateway.auth.mode }}",
-      "token": "{{ openclaw_config.gateway.auth.token }}"
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "{{ openclaw_config.agents.defaults.model.primary }}"
+      },
+      "models": {{ openclaw_config.agents.defaults.models | to_json }},
+      "workspace": "{{ openclaw_config.agents.defaults.workspace }}"
     }
+  },
+  "commands": {
+    "native": "{{ openclaw_config.commands.native }}",
+    "nativeSkills": "{{ openclaw_config.commands.nativeSkills }}",
+    "restart": {{ openclaw_config.commands.restart | lower }}
   },
   "channels": {
     "telegram": {
       "enabled": {{ openclaw_config.channels.telegram.enabled | lower }},
       "botToken": "${TELEGRAM_BOT_TOKEN}",
-      "dmPolicy": "{{ openclaw_config.channels.telegram.dmPolicy }}"
+      "dmPolicy": "{{ openclaw_config.channels.telegram.dmPolicy }}",
+      "groupPolicy": "{{ openclaw_config.channels.telegram.groupPolicy }}",
+      "streamMode": "{{ openclaw_config.channels.telegram.streamMode }}"
     },
     "discord": {
       "enabled": {{ openclaw_config.channels.discord.enabled | lower }},
       "token": "${DISCORD_BOT_TOKEN}",
+      "groupPolicy": "{{ openclaw_config.channels.discord.groupPolicy }}",
       "dmPolicy": "{{ openclaw_config.channels.discord.dmPolicy }}"
+      {%- if openclaw_discord_allowlist | length > 0 %}
+      ,"allowlist": {{ openclaw_discord_allowlist | to_json }}
+      {%- endif %}
+      {%- if openclaw_discord_guilds | length > 0 %}
+      ,"guilds": {{ openclaw_discord_guilds | to_json }}
+      {%- endif %}
+    }
+  },
+  "gateway": {
+    "port": {{ openclaw_config.gateway.port }},
+    "mode": "{{ openclaw_config.gateway.mode }}",
+    "bind": "{{ openclaw_config.gateway.bind }}",
+    "auth": {
+      "mode": "{{ openclaw_config.gateway.auth.mode }}",
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "trustedProxies": {{ openclaw_config.gateway.trustedProxies | to_json }},
+    "mdns": {
+      "enabled": {{ openclaw_config.gateway.mdns.enabled | lower }}
+    },
+    "tailscale": {
+      "mode": "{{ openclaw_config.gateway.tailscale.mode }}",
+      "resetOnExit": {{ openclaw_config.gateway.tailscale.resetOnExit | lower }}
+    }
+  },
+  "plugins": {
+    "entries": {
+      "telegram": {
+        "enabled": {{ openclaw_config.channels.telegram.enabled | lower }}
+      },
+      "discord": {
+        "enabled": {{ openclaw_config.channels.discord.enabled | lower }}
+      }
     }
   }
 }
