@@ -80,12 +80,12 @@ openclaw_config:
     defaults:
       workspace: "{{ openclaw_config_dir }}/workspace"
       model:
-        primary: "openrouter/anthropic/claude-sonnet-4-6"
+        primary: "openrouter/anthropic/claude-sonnet-4.6"
       models:
         "openrouter/auto":
           alias: "OpenRouter"
         "openrouter/anthropic/claude-sonnet-4": {}
-        "openrouter/anthropic/claude-sonnet-4.6": {}
+        "openrouter/anthropic/claude-sonnet-4-6": {}
   commands:
     native: "auto"
     nativeSkills: "auto"

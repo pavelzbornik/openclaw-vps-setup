@@ -34,12 +34,12 @@
       "token": "${DISCORD_BOT_TOKEN}",
       "groupPolicy": "{{ openclaw_config.channels.discord.groupPolicy }}",
       "dmPolicy": "{{ openclaw_config.channels.discord.dmPolicy }}"
-      {% if openclaw_discord_allowlist | length > 0 %}
+      {%- if openclaw_discord_allowlist | length > 0 %}
       ,"allowlist": {{ openclaw_discord_allowlist | to_json }}
-      {% endif %}
-      {% if openclaw_discord_guilds | length > 0 %}
+      {%- endif %}
+      {%- if openclaw_discord_guilds | length > 0 %}
       ,"guilds": {{ openclaw_discord_guilds | to_json }}
-      {% endif %}
+      {%- endif %}
     }
   },
   "gateway": {

@@ -32,7 +32,7 @@ game reimplementation with no server component.
 
 ## Architecture at a Glance
 
-```
+```text
 ~/.openclaw/
 ├── openclaw.json          # Main config (JSON5 format)
 ├── .env                   # API keys and env vars (chmod 600)
@@ -153,6 +153,7 @@ Gateway hot-reloads changes except: port, bind, auth, TLS (require restart).
   },
   models: {
     providers: {
+      // ⚠️ ${ENV_VAR} inline keys leak into prompt context (issue #11202) — prefer auth profiles or keychain
       anthropic: { apiKey: "${ANTHROPIC_API_KEY}" },
     },
   },
@@ -224,7 +225,8 @@ chown -R 1000:1000 ~/.openclaw  # for Docker deployments
 **Known CVEs/issues:**
 - CVE-2026-25253 (CVSS 8.8): Critical RCE patched in v2026.1.29 — always run latest
 - Issue #11202: API keys leaked into prompt context via `${ENV_VAR}` substitution
-- Over 135,000 exposed instances found online due to default `0.0.0.0` binding
+- Tens of thousands of exposed instances found online due to misconfigured `0.0.0.0` binding
+  (estimates range from ~21,000 to 135,000+ depending on scan methodology and date)
 - Infostealers specifically target `~/.openclaw/` config files
 
 Run `openclaw security audit --deep` after every deployment.

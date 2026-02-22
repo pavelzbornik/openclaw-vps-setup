@@ -92,8 +92,9 @@ Avatar is optional — skip unless the user raises it.
 ### 3. Agent personality (→ SOUL.md)
 
 Only needed if the user wants to customize agent behavior beyond defaults.
-The reference files in `openclaw-install/local-config/workspace/` are solid
-defaults — offer to use them as-is or adapt.
+The reference files in `openclaw-install/local-config/workspace/` (present in
+this repo as deployment templates) are solid defaults — offer to use them as-is
+or adapt.
 
 Key sections: Core Truths, Communication Style, Values, Boundaries,
 Anti-Patterns, Example Responses, Continuity.
