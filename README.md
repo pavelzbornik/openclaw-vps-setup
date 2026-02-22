@@ -27,10 +27,14 @@ openclaw/
 │   ├── roles/                 # Ansible roles
 │   ├── molecule/              # Testing framework
 │   └── scripts/               # Deployment scripts
+├── powershell/                 # Windows host VM provisioning
+│   ├── New-OpenClawVM.ps1     # One-command Hyper-V VM creator
+│   └── vendor/
+│       └── Hyper-V-Automation/ # fdcastel/Hyper-V-Automation submodule
 ├── terraform/                 # Discord IaC (optional)
 └── docs/                      # Project guides and references
     ├── README.md              # Docs index
-    ├── hyperv-setup.md         # Hyper-V VM checklist
+    ├── hyperv-setup.md         # Hyper-V VM setup (automated)
     ├── firewall.md             # Firewall and network controls
     ├── openclaw-config-repo.md # Git sync guidance
     └── discord-terraform.md    # Discord setup overview
@@ -115,9 +119,12 @@ make status
 Windows PowerShell (no WSL shell):
 
 ```powershell
+# Create the VM (one command — run from repo root as Administrator)
+git submodule update --init --recursive
+.\powershell\New-OpenClawVM.ps1 -IPAddress 192.168.1.151/24 -Gateway 192.168.1.1
+
+# Deploy OpenClaw
 cd ansible
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\scripts\setup-ssh.ps1 -VmAddress 192.168.1.151 -VmUser claw -SshKeyPath "$HOME\.ssh\openclaw_vm_ansible"
 .\scripts\deploy-windows.ps1 -Check
 .\scripts\deploy-windows.ps1
 ```

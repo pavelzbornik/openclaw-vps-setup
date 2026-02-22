@@ -1,3 +1,6 @@
 [submodule "ansible/vendor/openclaw-ansible"]
 	path = ansible/vendor/openclaw-ansible
 	url = https://github.com/openclaw/openclaw-ansible
+[submodule "powershell/vendor/Hyper-V-Automation"]
+	path = powershell/vendor/Hyper-V-Automation
+	url = https://github.com/fdcastel/Hyper-V-Automation.git

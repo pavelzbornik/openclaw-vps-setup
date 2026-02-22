@@ -74,6 +74,8 @@ pre-commit run ansible-lint       # Run only ansible-lint
 
 `ansible/vendor/` contains the official `openclaw-ansible` submodule. The `openclaw_vendor_base` role invokes its tasks. The `ansible.cfg` roles path includes both `roles:vendor/openclaw-ansible/roles`. Always `git submodule update --init --recursive` after cloning.
 
+`powershell/vendor/` contains the `fdcastel/Hyper-V-Automation` submodule for Windows VM provisioning.
+
 ### DevContainer Testing
 
 `.devcontainer/` runs two containers via Docker Compose:

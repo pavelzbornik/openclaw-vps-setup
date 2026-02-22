@@ -1,70 +1,68 @@
 # Hyper-V VM Setup (Windows 11)
 
-This is a concise checklist for preparing a Hyper-V VM before running Ansible.
+Automated one-command VM provisioning using [fdcastel/Hyper-V-Automation](https://github.com/fdcastel/Hyper-V-Automation).
 
-## 1) Create the VM
+## Prerequisites
 
-- Create a Generation 2 VM in Hyper-V Manager
-- Assign 2+ vCPUs and 4+ GB RAM
-- Attach the Ubuntu 24.04 Server ISO
+- Windows 11 with Hyper-V enabled
+- Admin PowerShell session
+- OpenSSH Client (built-in on Windows 11, or install via *Settings → Optional Features*)
+- Docker Desktop (for running Ansible — see [ansible/QUICKSTART.md](../ansible/QUICKSTART.md))
 
-## 2) Network and IP
+## One-Command VM Creation
 
-- Use an internal or NAT switch
-- Assign a static IP during Ubuntu install (example: `192.168.100.10/24`)
-- Record the VM IP for Ansible inventory
-
-## 3) Install Ubuntu + OpenSSH
-
-During the Ubuntu installer:
-
-- Create the `openclaw` user
-- Enable OpenSSH server
-- Reboot and verify SSH access
-
-If OpenSSH was not enabled during install, configure it in VM console:
-
-```bash
-sudo apt update
-sudo apt install -y openssh-server
-sudo systemctl enable --now ssh
-sudo systemctl status ssh --no-pager
-```
-
-If firewall is enabled:
-
-```bash
-sudo ufw allow OpenSSH
-sudo ufw status
-```
-
-From Windows host, verify network reachability:
+Run from the **repository root** in an elevated PowerShell session:
 
 ```powershell
-Test-NetConnection <vm-ip> -Port 22
+# First time: initialise the submodule
+git submodule update --init --recursive
+
+# Static IP (recommended — matches default inventory)
+.\powershell\New-OpenClawVM.ps1 -IPAddress 192.168.1.151/24 -Gateway 192.168.1.1
+
+# DHCP (update inventory/hosts.yml with the printed IP afterwards)
+.\powershell\New-OpenClawVM.ps1
 ```
 
-## 4) Prepare Ansible Host (Control Node)
+The script:
+1. Downloads and caches the Ubuntu 24.04 server cloud image
+2. Creates a Gen 2 Hyper-V VM (4 GB RAM, 2 vCPU, 32 GB disk)
+3. Injects your SSH public key via cloud-init
+4. Waits for SSH to become available
+5. Creates the `claw` user with passwordless sudo
+6. Prints the exact commands to run next
 
-Use one of these paths on your Windows host:
+## Parameters
 
-- **Recommended:** PowerShell + Docker Desktop (no WSL shell required)
-- **Alternative:** WSL2 Ubuntu + native Ansible
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `-VmName` | `OpenClaw-VM` | Hyper-V VM name |
+| `-VmUser` | `claw` | Linux user for Ansible |
+| `-SwitchName` | `Default Switch` | Hyper-V virtual switch |
+| `-IPAddress` | *(DHCP)* | Static IP in CIDR notation, e.g. `192.168.1.151/24` |
+| `-Gateway` | *(none)* | Default gateway (required with `-IPAddress`) |
+| `-MemoryStartupBytes` | `4 GB` | VM RAM |
+| `-ProcessorCount` | `2` | vCPU count |
+| `-VHDXSizeBytes` | `32 GB` | Disk size |
+| `-VmRootPath` | `C:\HyperV\OpenClaw` | VM file storage directory |
+| `-SshPublicKeyPath` | `~/.ssh/openclaw_vm_ansible.pub` | SSH public key; auto-generated if absent |
 
-Then follow the Ansible quickstart:
+## After VM Creation
 
-- [ansible/QUICKSTART.md](../ansible/QUICKSTART.md)
-
-## Optional PowerShell Snippets
+Update `ansible/inventory/hosts.yml` if needed, then deploy:
 
 ```powershell
-# Create an internal switch
-New-VMSwitch -SwitchName "OpenClawNAT" -SwitchType Internal
+cd ansible
+.\scripts\deploy-windows.ps1 -Check    # dry run
+.\scripts\deploy-windows.ps1           # deploy
+```
 
-# Assign IP to host-side interface
-$ifIndex = (Get-NetAdapter | Where-Object { $_.Name -like "*OpenClawNAT*" }).ifIndex
-New-NetIPAddress -IPAddress 192.168.100.1 -PrefixLength 24 -InterfaceIndex $ifIndex
+See [ansible/QUICKSTART.md](../ansible/QUICKSTART.md) for full deployment instructions.
 
-# Create NAT
-New-NetNat -Name "OpenClawNATNetwork" -InternalIPInterfaceAddressPrefix "192.168.100.0/24"
+## Existing / Manual VMs
+
+For VMs provisioned without this script (e.g. installed from ISO), use the legacy SSH setup helper:
+
+```powershell
+.\ansible\scripts\setup-ssh.ps1 -VmAddress 192.168.1.151 -VmUser claw
 ```
