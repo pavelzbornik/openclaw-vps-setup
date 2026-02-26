@@ -177,7 +177,7 @@ openclaw_discord_config_guilds_field: "guilds"
 
 openclaw_samba_enabled: true
 openclaw_samba_share_name: uploads
-openclaw_samba_share_path: /home/openclaw/uploads
+openclaw_samba_share_path: "{{ openclaw_home }}/uploads"
 
 # 1Password-backed Samba password settings
 openclaw_samba_password_vault: "OpenClaw"  # pragma: allowlist secret

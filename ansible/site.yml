@@ -222,6 +222,19 @@
       tags:
         - always
 
+    - name: Validate Samba password is defined
+      ansible.builtin.assert:
+        that:
+          - openclaw_samba_password is defined
+          - openclaw_samba_password | length > 0
+        fail_msg: >-
+          openclaw_samba_password is required when openclaw_samba_enabled is true.
+          Configure the Samba item in 1Password or set vault_openclaw_samba_password
+          in group_vars/vault.yml.
+      when: openclaw_samba_enabled | default(false)
+      tags:
+        - samba
+
     - name: Display target host information
       debug:
         msg: |
