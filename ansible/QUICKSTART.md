@@ -244,7 +244,7 @@ cd ansible
 
 ### Configure `~/.ssh/config`
 
-```
+```sshconfig
 Host openclaw-vps
   HostName 192.168.1.151
   User openclaw

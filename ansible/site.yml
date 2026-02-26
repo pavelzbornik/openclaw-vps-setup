@@ -161,7 +161,7 @@
       delegate_to: localhost
       run_once: true
       become: false
-      no_log: false
+      no_log: true
       register: vscode_ssh_key_op
       environment:
         OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
@@ -173,7 +173,7 @@
 
     - name: Set openclaw_ssh_keys from 1Password
       set_fact:
-        openclaw_ssh_keys: "{{ [vscode_ssh_key_op.stdout | trim] }}"
+        openclaw_ssh_keys: "{{ (openclaw_ssh_keys | default([])) | union([vscode_ssh_key_op.stdout | trim]) }}"
       when:
         - vscode_ssh_key_op is not skipped
         - vscode_ssh_key_op.rc | default(1) == 0
