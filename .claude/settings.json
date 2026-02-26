@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command 'Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -like \"\"*vEthernet*\"\" } | Select-Object InterfaceAlias, IPAddress, PrefixLength')",
+      "Bash(powershell -Command:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -Command:*)",
+      "Bash(pwsh --version)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Github\\\\openclaw-vps-setup\\\\powershell\\\\New-OpenClawVM.ps1\" -SwitchName \"Home Network\" -IPAddress \"192.168.1.151/24\" -Gateway \"192.168.1.1\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)",
+      "Bash(ssh:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(powershell.exe -Command \"Get-NetRoute -DestinationPrefix ''0.0.0.0/0'' | Select-Object InterfaceAlias, NextHop | Format-Table\")",
+      "Bash(powershell.exe -Command \"Set-Location ''C:\\\\Github\\\\openclaw-vps-setup\\\\ansible''; .\\\\scripts\\\\deploy-windows.ps1 2>&1\")",
+      "Bash(powershell.exe -File \"C:\\\\Github\\\\openclaw-vps-setup\\\\ansible\\\\scripts\\\\deploy-windows.ps1\")",
+      "Bash(tee:*)",
+      "Bash(powershell.exe -Command \"op --version 2>&1; Write-Host ''SA set:'' \\([bool]$env:OP_SERVICE_ACCOUNT_TOKEN\\)\")",
+      "Bash(powershell.exe -Command \"op --version; Write-Host ''SA token set:'' \\($null -ne $env:OP_SERVICE_ACCOUNT_TOKEN -and $env:OP_SERVICE_ACCOUNT_TOKEN -ne ''''\\)\")"
+    ]
+  }
+}

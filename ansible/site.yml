@@ -15,6 +15,35 @@
       tags:
         - always
 
+    - name: Retrieve Tailscale auth key from 1Password
+      command: op read "op://OpenClaw/Tailscale/credential"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: tailscale_authkey_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when:
+        - tailscale_enabled | default(false)
+        - openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set tailscale_authkey from 1Password (skipped if placeholder or missing)
+      set_fact:
+        tailscale_authkey: "{{ tailscale_authkey_op.stdout | trim }}"
+      when:
+        - tailscale_authkey_op is not skipped
+        - tailscale_authkey_op.rc | default(1) == 0
+        - tailscale_authkey_op.stdout | default('') | trim | length > 0
+        - "'PLACEHOLDER' not in (tailscale_authkey_op.stdout | default(''))"
+      no_log: true
+      tags:
+        - always
+
     - name: Display target host information
       debug:
         msg: |

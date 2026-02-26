@@ -108,50 +108,47 @@ ansible all -i inventory/hosts.yml -m ping
 
 ## 4) Configure Secrets
 
-### Required: Ansible Vault for `tailscale_authkey` + `OP_SERVICE_ACCOUNT_TOKEN`
+All secrets are stored in **1Password** — no Ansible Vault needed.
 
-From `ansible/` directory:
+### Required: 1Password Service Account
+
+1. Go to [my.1password.com](https://my.1password.com) → Settings → Service Accounts
+2. Create a service account with **read + write** access (write is only needed on first deploy to bootstrap items)
+3. Copy the `ops_...` token
+
+Set it in your PowerShell session before every deploy:
 
 ```powershell
-# 1) Create vault password file (do not commit)
-Set-Content -Path .\.vault_pass.txt -Value "choose-a-strong-password"
+$env:OP_SERVICE_ACCOUNT_TOKEN = "ops_your-token-here"
+```
 
-# 2) Create your local vault file from example
+### 1Password Items
+
+Run the bootstrap script once (before first deploy) to create the **OpenClaw** vault and all required items. Existing items are never overwritten.
+
+```powershell
+$env:OP_SERVICE_ACCOUNT_TOKEN = "ops_your-token-here"
+.\scripts\bootstrap-1password.ps1
+```
+
+Then update the `PLACEHOLDER_*` values in 1Password with your real credentials before deploying:
+
+| 1Password Item | Field | Used for |
+| --- | --- | --- |
+| `Telegram Bot` | `credential` | `TELEGRAM_BOT_TOKEN` |
+| `discord` | `credential` | `DISCORD_BOT_TOKEN` |
+| `OpenAI` | `credential` | `OPENAI_API_KEY` |
+| `OpenRouter API Credentials` | `credential` | `OPENROUTER_API_KEY` |
+| `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` (auto-generated — no action needed) |
+| `Tailscale` | `credential` | Tailscale auth key for VPN |
+
+### Optional: `vault.yml` for non-sensitive config
+
+`group_vars/vault.yml` is only needed for non-secret local overrides (Discord allowlists, agent identity text). Copy and edit if needed:
+
+```powershell
 Copy-Item .\group_vars\vault.example.yml .\group_vars\vault.yml
-
-# 3) Edit the file in VS Code/Notepad and set your real values
-#    (vault_tailscale_authkey and vault_openclaw_op_service_account_token)
-
-# 4) Encrypt using Ansible Vault inside Docker (no local ansible install needed)
-docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault encrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
-```
-
-Set:
-
-- `vault_tailscale_authkey`
-- `vault_openclaw_op_service_account_token`
-
-Then deploy (PowerShell + Docker):
-
-```powershell
-.\scripts\deploy-windows.ps1 -VaultPasswordFile .\.vault_pass.txt
-```
-
-Notes:
-
-- `group_vars/vault.yml` and `.vault_pass.txt` are gitignored.
-- Secret fallbacks are disabled; `vault_openclaw_op_service_account_token` is required.
-- Runtime `.env` values are populated on the VM via `op inject` from 1Password references.
-- Create a 1Password item `OpenClaw / OpenClaw Gateway / credential` for `OPENCLAW_GATEWAY_TOKEN`.
-
-To update vaulted values later:
-
-```powershell
-# Decrypt
-docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault decrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
-
-# Edit group_vars/vault.yml locally, then re-encrypt
-docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python -m pip install --quiet ansible-core && ansible-vault encrypt group_vars/vault.yml --vault-password-file .vault_pass.txt"
+# Edit vault.yml — no encryption needed, no secrets here
 ```
 
 ## 5) Deploy
@@ -161,6 +158,9 @@ docker run --rm -v "${PWD}:/work" -w /work python:3.11-bookworm bash -lc "python
 From `ansible/` directory in PowerShell:
 
 ```powershell
+# Set your 1Password service account token first (required)
+$env:OP_SERVICE_ACCOUNT_TOKEN = "ops_your-token-here"
+
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\scripts\deploy-windows.ps1 -Check
 .\scripts\deploy-windows.ps1

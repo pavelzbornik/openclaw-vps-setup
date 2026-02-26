@@ -51,7 +51,8 @@
 
 .NOTES
     Run from the repository root in an elevated PowerShell session.
-    Requires: Hyper-V, OpenSSH Client (built-in on Windows 11).
+    Requires: Hyper-V enabled, OpenSSH Client (built-in on Windows 11), winget.
+    qemu-img is installed automatically via winget if not already present.
     After the VM is ready, deploy with: cd ansible && .\scripts\deploy-windows.ps1
 #>
 [CmdletBinding()]
@@ -92,14 +93,14 @@ function Write-Done {
 function Resolve-SshKey {
     $privateKeyPath = [System.IO.Path]::ChangeExtension($SshPublicKeyPath, $null).TrimEnd('.')
     if (-not (Test-Path $SshPublicKeyPath)) {
-        Write-Step "SSH public key not found — generating new ED25519 keypair"
+        Write-Step "SSH public key not found - generating new ED25519 keypair"
         $sshDir = Split-Path -Parent $SshPublicKeyPath
         New-Item -Path $sshDir -ItemType Directory -Force | Out-Null
         $keygen = Get-Command ssh-keygen -ErrorAction Stop
         # -N '' sets an empty passphrase (no quotes needed on Linux; empty string works on Windows OpenSSH)
         $keygenOutput = & $keygen.Source -t ed25519 -q -C 'openclaw-vm-ansible' -f $privateKeyPath -N '' 2>&1
         if (-not (Test-Path $SshPublicKeyPath)) {
-            throw "ssh-keygen failed — key not found at $SshPublicKeyPath`n$keygenOutput"
+            throw "ssh-keygen failed - key not found at $SshPublicKeyPath`n$keygenOutput"
         }
     }
     return @{
@@ -118,7 +119,7 @@ function Wait-ForSsh {
         if ($test.TcpTestSucceeded) { return }
         Start-Sleep -Seconds 5
     }
-    throw "Timed out waiting for SSH on $Address — check VM console for cloud-init errors"
+    throw "Timed out waiting for SSH on $Address - check VM console for cloud-init errors"
 }
 
 # ── Create claw user via SSH ───────────────────────────────────────────────────
@@ -149,6 +150,25 @@ chmod 440 "/etc/sudoers.d/$VmUser"
     }
 }
 
+# ── Ensure qemu-img is available (auto-install via winget) ────────────────────
+function Resolve-QemuImg {
+    if (Get-Command qemu-img -ErrorAction SilentlyContinue) { return }
+    Write-Step "qemu-img not found - installing via winget (one-time)"
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "qemu-img is required but winget is unavailable. Install manually: winget install cloudbase.qemu-img"
+    }
+    winget install --id cloudbase.qemu-img --accept-source-agreements --accept-package-agreements --silent | Out-Null
+    # winget does not refresh PATH in the current session; locate and add the package dir
+    $pkgRoot = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages"
+    $qemuDir = Get-ChildItem $pkgRoot -Filter 'cloudbase.qemu-img*' -Directory -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    if ($qemuDir) { $env:PATH = "$qemuDir;$env:PATH" }
+    if (-not (Get-Command qemu-img -ErrorAction SilentlyContinue)) {
+        throw "qemu-img installation failed. Install manually: winget install cloudbase.qemu-img"
+    }
+    Write-Done "qemu-img installed and ready"
+}
+
 # ── Resolve VM IP after DHCP ───────────────────────────────────────────────────
 function Resolve-VmIp {
     param([string]$Name, [int]$TimeoutSeconds = 120)
@@ -159,24 +179,26 @@ function Resolve-VmIp {
         if ($ips) { return $ips[0] }
         Start-Sleep -Seconds 5
     }
-    throw "Timed out waiting for DHCP IP on '$Name' — check Hyper-V switch DHCP"
+    throw "Timed out waiting for DHCP IP on '$Name' - check Hyper-V switch DHCP"
 }
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 Import-Module Hyper-V -ErrorAction Stop
 
+Resolve-QemuImg
 $keys = Resolve-SshKey
 Write-Done "SSH public key: $SshPublicKeyPath"
-
-# Import library scripts from submodule
-. (Join-Path $vendorRoot 'Get-UbuntuImage.ps1')
-. (Join-Path $vendorRoot 'New-VMFromUbuntuImage.ps1')
 
 $imageCache = $ImageCachePath
 New-Item -Path $imageCache -ItemType Directory -Force | Out-Null
 
 Write-Step "Downloading Ubuntu 24.04 cloud image (cached after first run)"
-$imagePath = Get-UbuntuImage -OutputPath $imageCache
+Push-Location $vendorRoot
+try {
+    $imagePath = & (Join-Path $vendorRoot 'Get-UbuntuImage.ps1') -OutputPath $imageCache
+} finally {
+    Pop-Location
+}
 Write-Done "Image: $imagePath"
 
 Write-Step "Creating Hyper-V VM '$VmName'"
@@ -199,7 +221,12 @@ if (-not [string]::IsNullOrWhiteSpace($IPAddress)) {
     $newVmParams['Gateway'] = $Gateway
 }
 
-New-VMFromUbuntuImage @newVmParams
+Push-Location $vendorRoot
+try {
+    & (Join-Path $vendorRoot 'New-VMFromUbuntuImage.ps1') @newVmParams
+} finally {
+    Pop-Location
+}
 Write-Done "VM '$VmName' created and started"
 
 # Resolve IP
@@ -216,7 +243,7 @@ New-ClawUser -Address $resolvedIp -PrivateKeyPath $keys.PrivateKey
 Write-Done "VM is ready for Ansible deployment"
 Write-Host ''
 Write-Host 'Next steps:' -ForegroundColor Yellow
-Write-Host "  1. Update ansible/inventory/hosts.yml — set ansible_host: $resolvedIp" -ForegroundColor White
+Write-Host "  1. Update ansible/inventory/hosts.yml - set ansible_host: $resolvedIp" -ForegroundColor White
 Write-Host "  2. cd ansible" -ForegroundColor White
 Write-Host '  3. .\scripts\deploy-windows.ps1 -Check' -ForegroundColor White
 Write-Host '  4. .\scripts\deploy-windows.ps1' -ForegroundColor White
