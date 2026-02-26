@@ -127,9 +127,17 @@ else:
 # ── Config items (read back into vault.yml) ────────────────────────────────────
 print('')
 print('[*] Config items (values written to group_vars/vault.yml):')
-# Discord allowlist/guilds are added to the existing discord item (already created above)
-op('item', 'edit', 'discord', '--vault', VAULT,
-   'allowlist=REPLACE_ME_USER_ID', 'guilds=REPLACE_ME_GUILD_ID')
+# Discord allowlist/guilds are added to the existing discord item (already created above).
+# Only set placeholder values if the fields are missing or still unset.
+_discord_allowlist = get_field('discord', 'allowlist')
+_discord_guilds    = get_field('discord', 'guilds')
+_discord_edits = []
+if not _discord_allowlist:
+    _discord_edits.append('allowlist=REPLACE_ME_USER_ID')
+if not _discord_guilds:
+    _discord_edits.append('guilds=REPLACE_ME_GUILD_ID')
+if _discord_edits:
+    op('item', 'edit', 'discord', '--vault', VAULT, *_discord_edits)
 create_item('OpenClaw',
     identity_md='# IDENTITY.md\n<!-- Replace with your agent identity content -->',
     user_md='# USER.md\n<!-- Replace with your user context content -->')

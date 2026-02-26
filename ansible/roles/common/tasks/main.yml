@@ -54,7 +54,7 @@
     state: present
     backup: true
     validate: 'sshd -t -f %s'
-  notify: Restart sshd
+  notify: Restart ssh
   when: ssh_harden | default(true)
   tags:
     - common
@@ -68,7 +68,7 @@
     line: 'PermitRootLogin no'
     state: present
     validate: 'sshd -t -f %s'
-  notify: Restart sshd
+  notify: Restart ssh
   when: ssh_harden | default(true)
   tags:
     - common

@@ -126,14 +126,15 @@ print_info "Creating test inventory..."
 cat > inventory/test-container.yml << 'EOF'
 all:
   children:
-    test_vms:
+    openclaw_vms:
       hosts:
         ubuntu-target:
-                    ansible_host: ubuntu-target
+          ansible_host: ubuntu-target
           ansible_user: root
           ansible_ssh_private_key_file: ~/.ssh/id_ed25519
           ansible_python_interpreter: /usr/bin/python3
           ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+          ci_test: true
       vars:
         ansible_connection: ssh
 EOF
@@ -242,7 +243,7 @@ fi
 # Ensure Node.js/npm are installed before attempting Claude CLI installation
 if ! command -v npm &>/dev/null; then
     print_info "Installing Node.js and npm (required for Claude Code CLI)..."
-    if ! sudo apt-get update && sudo apt-get install -y nodejs npm; then
+    if ! (sudo apt-get update && sudo apt-get install -y nodejs npm); then
         print_warn "Failed to install Node.js/npm via apt-get; Claude Code CLI installation will be skipped."
         npm_installed=0
     else
