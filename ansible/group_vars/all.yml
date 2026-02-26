@@ -165,6 +165,7 @@ openclaw_content_vault: "OpenClaw"
 openclaw_content_item: "OpenClaw"
 openclaw_content_identity_md_field: "identity_md"
 openclaw_content_user_md_field: "user_md"
+openclaw_content_vscode_ssh_key_field: "vscode_ssh_key"
 
 # 1Password-backed Discord config (allowlist, guilds — lives in the discord bot token item)
 openclaw_discord_config_vault: "OpenClaw"
