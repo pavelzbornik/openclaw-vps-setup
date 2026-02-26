@@ -54,6 +54,10 @@
         - /home/openclaw/.openclaw/credentials
         - /home/openclaw/.openclaw/data
         - /home/openclaw/.openclaw/logs
+        - /home/openclaw/.openclaw/agents
+        - /home/openclaw/.openclaw/agents/main
+        - /home/openclaw/.openclaw/agents/main/agent
+        - /home/openclaw/.openclaw/workspace
       tags:
         - verify
 

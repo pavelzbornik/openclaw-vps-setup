@@ -2,7 +2,7 @@
 # OpenClaw local role: config templating + systemd service for unattended deploys.
 #
 # Upstream (via vendor_base) handles: user creation, pnpm dirs, pnpm install,
-# .bashrc PATH, .openclaw/ directory structure.
+# .bashrc PATH, .openclaw/ directory structure (including agents/, workspace/).
 # This role only adds what upstream doesn't: pre-baked config files, systemd
 # service, logrotate, and optional onboard/doctor commands.
 
@@ -80,18 +80,6 @@
   tags:
     - openclaw
     - config
-
-- name: Create OpenClaw workspace directory
-  ansible.builtin.file:
-    path: "{{ openclaw_config.agents.defaults.workspace }}"
-    state: directory
-    owner: "{{ openclaw_user }}"
-    group: "{{ openclaw_user }}"
-    mode: '0750'
-  tags:
-    - openclaw
-    - config
-    - workspace
 
 - name: Bootstrap IDENTITY.md (first deploy only)
   ansible.builtin.copy:
