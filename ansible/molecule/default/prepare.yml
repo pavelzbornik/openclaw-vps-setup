@@ -12,11 +12,16 @@
       wait_for_connection:
         timeout: 60
 
-    - name: Install Python3 for Ansible
-      raw: |
-        apt-get update
-        apt-get install -y python3 python3-apt sudo
+    - name: Check if python3 is already available
+      raw: python3 --version
       changed_when: false
+      failed_when: false
+      register: python3_check
+
+    - name: Install Python3 for Ansible
+      raw: DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-apt sudo
+      changed_when: false
+      when: python3_check.rc != 0
 
     - name: Gather facts after Python installation
       setup:
