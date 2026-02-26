@@ -116,3 +116,37 @@ Triggers: push to `main`, `claude/**`, `feature/**`; PRs targeting `main`.
 - 1Password CLI (`op inject`) used for runtime secrets on the VM
 - `.secrets.baseline` tracks allowed secrets for `detect-secrets`
 - Terraform Discord resources excluded from secrets scanning
+
+### 1Password Vaults
+
+The following vaults are available in this environment. Always use the **OpenClaw** vault for project secrets:
+
+When reading or writing secrets with the `op` CLI, target the OpenClaw vault explicitly:
+
+```bash
+op item get "item-name" --vault OpenClaw
+op item create --vault OpenClaw ...
+```
+
+### 1Password Item Structure
+
+All items live in the **OpenClaw** vault. Single-secret items use the `credential` field.
+Multi-value items use descriptive field names.
+
+| Item | Fields | Purpose |
+|------|--------|---------|
+| `discord` | `credential`, `allowlist`, `guilds` | Discord bot token; comma-separated user allowlist and guild IDs |
+| `OpenClaw` | `identity_md`, `user_md` | Agent identity (IDENTITY.md) and user context (USER.md) content |
+| `OpenClaw Gateway` | `credential` | Auto-generated gateway API token |
+| `AWS Backup` | `access_key_id`, `secret_access_key`, `s3_bucket`, `passphrase` | S3 credentials and backup encryption passphrase |
+| `Tailscale` | `credential` | Tailscale VPN auth key |
+| `OpenAI` | `credential` | OpenAI API key |
+| `OpenRouter API Credentials` | `credential` | OpenRouter API key |
+| `Telegram Bot` | `credential` | Telegram bot token |
+| `Service Account Auth Token` | `credential` | 1Password service account token for CI/CD |
+
+**Naming rules:**
+- Item names match the service they represent (e.g. `discord`, `Tailscale`, `OpenAI`)
+- OpenClaw-specific items are prefixed with `OpenClaw` or are named `OpenClaw`
+- Multi-value items group logically related fields (e.g. all Discord config in `discord`, all AWS/backup in `AWS Backup`)
+- Single-secret items always use the `credential` field name

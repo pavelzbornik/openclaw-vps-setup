@@ -5,7 +5,7 @@
 # Usage:
 #   ansible-playbook -i inventory/hosts.yml backup.yml
 #
-# Prerequisites: vault_openclaw_op_service_account_token and openclaw_s3_bucket must be set.
+# Prerequisites: openclaw_s3_bucket is fetched from 1Password "AWS Backup" item.
 
 - name: Deploy OpenClaw backup cron job
   hosts: openclaw_vms
@@ -17,6 +17,33 @@
         file: "{{ playbook_dir }}/group_vars/vault.yml"
       no_log: true
       when: lookup('ansible.builtin.fileglob', playbook_dir + '/group_vars/vault.yml', errors='ignore') | length > 0
+      tags:
+        - always
+
+    - name: Retrieve S3 bucket name from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_aws_key_vault }}/{{ openclaw_aws_key_item }}/{{ openclaw_aws_s3_bucket_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: s3_bucket_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when: openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set openclaw_s3_bucket from 1Password
+      set_fact:
+        openclaw_s3_bucket: "{{ s3_bucket_op.stdout | trim }}"
+      when:
+        - s3_bucket_op is not skipped
+        - s3_bucket_op.rc | default(1) == 0
+        - s3_bucket_op.stdout | default('') | trim | length > 0
       tags:
         - always
 

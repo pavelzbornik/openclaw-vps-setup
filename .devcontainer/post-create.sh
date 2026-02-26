@@ -223,11 +223,48 @@ else
     print_warn "Ansible ping test failed. Try running: ansible all -i inventory/test-container.yml -m ping"
 fi
 
-# Install Claude Code CLI
-print_info "Installing Claude Code CLI..."
-install_claude_cli || print_warn "Claude Code CLI installation skipped/failed; continuing setup."
-# Add claude convenience alias
-CCLAUDE_ALIAS='alias cclaude="claude --dangerously-skip-permissions"'
+# Install 1Password CLI
+if ! command -v op &>/dev/null; then
+    print_info "Installing 1Password CLI..."
+    # Remove broken Yarn apt repo first to prevent apt-get update failure
+    sudo rm -f /etc/apt/sources.list.d/yarn.list /etc/apt/sources.list.d/yarn.list.save
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | sudo tee /etc/apt/sources.list.d/1password.list > /dev/null
+    if sudo apt-get update && sudo apt-get install -y 1password-cli; then
+        print_info "1Password CLI installed successfully."
+    else
+        print_warn "1Password CLI installation failed."
+    fi
+else
+    print_info "1Password CLI is already installed."
+fi
+
+# Ensure Node.js/npm are installed before attempting Claude CLI installation
+if ! command -v npm &>/dev/null; then
+    print_info "Installing Node.js and npm (required for Claude Code CLI)..."
+    if ! sudo apt-get update && sudo apt-get install -y nodejs npm; then
+        print_warn "Failed to install Node.js/npm via apt-get; Claude Code CLI installation will be skipped."
+        npm_installed=0
+    else
+        npm_installed=1
+    fi
+else
+    npm_installed=1
+fi
+
+# Install Claude Code CLI only if npm is available
+if [ "$npm_installed" = "1" ]; then
+    print_info "Installing Claude Code CLI..."
+    if ! install_claude_cli; then
+        print_warn "Claude Code CLI installation failed; continuing setup without it."
+    fi
+else
+    print_warn "Claude Code CLI installation skipped; npm not available."
+fi
+# Add claude convenience alias with sandboxing enabled for DevContainer
+# IS_SANDBOX=1 enables Claude Code's filesystem/network isolation
+# --dangerously-skip-permissions allows unrestricted command execution within the sandbox
+CCLAUDE_ALIAS='alias cclaude="IS_SANDBOX=1 claude --dangerously-skip-permissions"'
 grep -qF 'alias cclaude' ~/.bashrc 2>/dev/null || echo "$CCLAUDE_ALIAS" >> ~/.bashrc || true
 grep -qF 'alias cclaude' ~/.zshrc 2>/dev/null || echo "$CCLAUDE_ALIAS" >> ~/.zshrc || true
 

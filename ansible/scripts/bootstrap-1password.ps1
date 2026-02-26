@@ -127,22 +127,21 @@ else:
 # ── Config items (read back into vault.yml) ────────────────────────────────────
 print('')
 print('[*] Config items (values written to group_vars/vault.yml):')
-create_item('OpenClaw Discord Config',
-    allowlist='REPLACE_ME_USER_ID',
-    guilds='REPLACE_ME_GUILD_ID')
-create_item('OpenClaw IDENTITY.md',
-    content='# IDENTITY.md\n<!-- Replace with your agent identity content -->')
-create_item('OpenClaw USER.md',
-    content='# USER.md\n<!-- Replace with your user context content -->')
+# Discord allowlist/guilds are added to the existing discord item (already created above)
+op('item', 'edit', 'discord', '--vault', VAULT,
+   'allowlist=REPLACE_ME_USER_ID', 'guilds=REPLACE_ME_GUILD_ID')
+create_item('OpenClaw',
+    identity_md='# IDENTITY.md\n<!-- Replace with your agent identity content -->',
+    user_md='# USER.md\n<!-- Replace with your user context content -->')
 
 # ── Read config values and generate vault.yml ──────────────────────────────────
 print('')
 print('[*] Reading config values from 1Password...')
 
-allowlist = get_field('OpenClaw Discord Config', 'allowlist')
-guilds    = get_field('OpenClaw Discord Config', 'guilds')
-identity  = get_field('OpenClaw IDENTITY.md', 'content')
-user_md   = get_field('OpenClaw USER.md', 'content')
+allowlist = get_field('discord', 'allowlist')
+guilds    = get_field('discord', 'guilds')
+identity  = get_field('OpenClaw', 'identity_md')
+user_md   = get_field('OpenClaw', 'user_md')
 
 allowlist_display = '(placeholder)' if is_placeholder(allowlist) else allowlist
 guilds_display = '(placeholder)' if is_placeholder(guilds) else guilds
@@ -193,10 +192,10 @@ needs_update = [
         ('OpenAI',                     get_field('OpenAI',                     'credential')),
         ('OpenRouter API Credentials', get_field('OpenRouter API Credentials', 'credential')),
         ('Tailscale',                  get_field('Tailscale',                  'credential')),
-        ('OpenClaw Discord Config/allowlist', allowlist),
-        ('OpenClaw Discord Config/guilds',    guilds),
-        ('OpenClaw IDENTITY.md',       identity),
-        ('OpenClaw USER.md',           user_md),
+        ('discord/allowlist',      allowlist),
+        ('discord/guilds',         guilds),
+        ('OpenClaw/identity_md',   identity),
+        ('OpenClaw/user_md',       user_md),
     ]
     if is_placeholder(val)
 ]

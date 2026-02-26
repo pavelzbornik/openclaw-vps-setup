@@ -24,8 +24,7 @@ The playbooks read secrets from 1Password via `op read`. Create these items in y
 
 | Item name | Fields required | Used for |
 |---|---|---|
-| `Backup Passphrase` | `credential` | AES-256 encryption/decryption of backup archives |
-| `AWS Backup` | `access_key_id`, `secret_access_key` | S3 upload/download |
+| `AWS Backup` | `access_key_id`, `secret_access_key`, `s3_bucket`, `passphrase` | S3 credentials and AES-256 encryption/decryption of backup archives |
 
 The 1Password service account token is stored in `group_vars/vault.yml`:
 
@@ -57,12 +56,13 @@ All backup variables are in `ansible/group_vars/all.yml` under the `Backup / Res
 | `openclaw_backup_cron_hour` | `2` | UTC hour for daily backup |
 | `openclaw_backup_cron_minute` | `0` | UTC minute for daily backup |
 | `openclaw_backup_passphrase_vault` | `OpenClaw` | 1Password vault for passphrase |
-| `openclaw_backup_passphrase_item` | `Backup Passphrase` | 1Password item name |
-| `openclaw_backup_passphrase_field` | `credential` | 1Password field name |
+| `openclaw_backup_passphrase_item` | `AWS Backup` | 1Password item name |
+| `openclaw_backup_passphrase_field` | `passphrase` | 1Password field name |
 | `openclaw_aws_key_vault` | `OpenClaw` | 1Password vault for AWS keys |
 | `openclaw_aws_key_item` | `AWS Backup` | 1Password item name |
 | `openclaw_aws_access_key_field` | `access_key_id` | 1Password field for access key |
 | `openclaw_aws_secret_key_field` | `secret_access_key` | 1Password field for secret key |
+| `openclaw_aws_s3_bucket_field` | `s3_bucket` | 1Password field for S3 bucket name |
 
 Set `openclaw_s3_bucket` either in `group_vars/vault.yml` (recommended) or pass it on the CLI.
 
