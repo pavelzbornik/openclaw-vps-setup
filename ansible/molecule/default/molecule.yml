@@ -18,6 +18,11 @@ platforms:
     cgroupns_mode: host
     privileged: true
     pre_build_image: true
+    # groups assigns the instance to the group site.yml targets; replaces the
+    # old static inventory.hosts block (which would need updating if the
+    # platform name ever changes).
+    groups:
+      - openclaw_vms
     networks:
       - name: openclaw-test-network
 
@@ -33,11 +38,6 @@ provisioner:
     # project's ansible.cfg roles_path is not used. Set it explicitly here.
     ANSIBLE_ROLES_PATH: "${MOLECULE_PROJECT_DIRECTORY}/roles:${MOLECULE_PROJECT_DIRECTORY}/vendor/openclaw-ansible/roles"
   inventory:
-    # Put the container in the group that site.yml targets.
-    hosts:
-      openclaw_vms:
-        hosts:
-          openclaw-test:
     group_vars:
       all:
         # Ansible connection — Docker containers run as root

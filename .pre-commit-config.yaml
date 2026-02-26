@@ -108,7 +108,13 @@ repos:
       - id: molecule-test
         name: Molecule tests (Ansible)
         language: system
-        entry: bash -c 'docker info>/dev/null 2>&1 || { echo "Docker unavailable, skipping molecule (CI will run it)"; exit 0; }; cd ansible && molecule test'
+        entry: >-
+          bash -c '
+          docker info>/dev/null 2>&1 || { echo "Docker unavailable, skipping molecule (CI will run it)"; exit 0; };
+          exec 9>/tmp/openclaw-molecule.lock;
+          flock -w 600 9 || { echo "Timed out waiting for molecule lock after 10 min"; exit 1; };
+          cd ansible && molecule test
+          '
         stages: [pre-push]
         pass_filenames: false
         always_run: true
