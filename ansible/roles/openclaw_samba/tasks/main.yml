@@ -14,8 +14,9 @@
     mode: "0750"
 
 - name: Set Samba password for openclaw user
-  ansible.builtin.shell: |
-    printf '%s\n%s\n' "{{ openclaw_samba_password }}" "{{ openclaw_samba_password }}" | smbpasswd -a -s {{ openclaw_user }}
+  ansible.builtin.command: smbpasswd -a -s {{ openclaw_user }}
+  args:
+    stdin: "{{ openclaw_samba_password }}\n{{ openclaw_samba_password }}\n"
   no_log: true
   changed_when: true
 
