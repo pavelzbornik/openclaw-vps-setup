@@ -23,6 +23,10 @@
       changed_when: false
       when: ansible_prereq_check.rc != 0
 
+    - name: Clean apt cache to prevent stale package errors
+      raw: apt-get clean
+      changed_when: false
+
     - name: Gather facts after Python installation
       setup:
 
