@@ -1,0 +1,5 @@
+---
+openclaw_samba_enabled: true
+openclaw_samba_share_name: uploads
+openclaw_samba_share_path: /home/openclaw/uploads
+openclaw_samba_share_comment: "OpenClaw file drop"

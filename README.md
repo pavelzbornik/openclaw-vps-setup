@@ -71,6 +71,7 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 - ✅ Sets up Tailscale VPN (optional)
 - ✅ Installs 1Password CLI for secrets management
 - ✅ Creates a systemd service for OpenClaw
+- ✅ Exposes a Samba file-drop share on the LAN (optional)
 - ✅ Includes Molecule and devcontainer testing
 
 ### Prerequisites
@@ -159,6 +160,7 @@ OpenClaw is an autonomous AI personal assistant that connects messaging platform
 3. **onepassword**: 1Password CLI for secrets management
 4. **openclaw_config**: Deploys `openclaw.json`, `.env` (via `op inject`), systemd service, and logrotate
 5. **openclaw_gateway_proxy**: Optional Nginx HTTPS reverse proxy for LAN access
+6. **openclaw_samba**: Optional Samba share exposing `/home/openclaw/uploads/` to the LAN for easy file drops from any device
 
 ### Testing
 

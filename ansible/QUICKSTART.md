@@ -142,6 +142,22 @@ Then update the `PLACEHOLDER_*` values in 1Password with your real credentials b
 | `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` (auto-generated — no action needed) |
 | `Tailscale` | `credential` | Tailscale auth key for VPN |
 | `OpenClaw` | `vscode_ssh_key` | Your SSH public key for VS Code Remote SSH access (optional) |
+| `Samba` | `credential` | Samba share password — create before first samba deploy (see below) |
+
+#### Samba share (optional, enabled by default)
+
+If `openclaw_samba_enabled: true` (the default), create the `Samba` item **once** before the first deploy:
+
+```bash
+op item create --vault OpenClaw --category login \
+  --title "Samba" credential="$(op generate-password)"
+```
+
+Then deploy (or redeploy) with the `samba` tag:
+
+```bash
+cd ansible && make deploy TAGS=samba
+```
 
 ### Optional: `vault.yml` for non-sensitive config
 
@@ -208,6 +224,17 @@ sudo journalctl -u openclaw -n 100 --no-pager
 ```bash
 which openclaw
 openclaw --version
+```
+
+### Verify Samba file-drop share (if enabled)
+
+```bash
+sudo systemctl status smbd nmbd --no-pager
+sudo ufw status | grep -i samba
+# From another machine on the LAN:
+# Windows:  \\192.168.1.151\uploads
+# macOS:    smb://192.168.1.151/uploads  (Finder → Go → Connect to Server)
+# Linux:    smbclient //192.168.1.151/uploads -U openclaw
 ```
 
 ### Verify LAN HTTPS ingress (Nginx)

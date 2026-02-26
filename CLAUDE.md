@@ -2,6 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Documentation Maintenance
+
+When implementing any new feature, role, playbook, or variable, **always update the following docs as part of the same task** — do not wait to be asked:
+
+| File | Update when |
+|------|-------------|
+| `README.md` | New role, capability, or feature flag added |
+| `ansible/README.md` | New role (directory tree + Roles section + 1Password table if applicable) |
+| `ansible/QUICKSTART.md` | New 1Password item required, new post-deploy verification step, or new optional setup step |
+| `CLAUDE.md` — Playbook Execution Order | New role added to `site.yml` |
+| `CLAUDE.md` — 1Password Item Structure | New 1Password vault item added |
+| `CLAUDE.md` — Common Commands | New deploy tag or one-time setup command added |
+| `docs/firewall.md` | New ports opened by UFW |
+
 ## Project Purpose
 
 Infrastructure-as-Code for automated provisioning and deployment of the OpenClaw AI agent (a Node.js autonomous assistant) on Ubuntu VPS or Hyper-V VMs. Uses Ansible with an upstream `openclaw-ansible` git submodule for the base Node.js/Tailscale/firewall stack.
@@ -27,6 +41,7 @@ cd ansible && make deploy
 cd ansible && make deploy TAGS=openclaw
 cd ansible && make deploy TAGS=common
 cd ansible && make deploy TAGS=vendor
+cd ansible && make deploy TAGS=samba
 
 # Deploy to DevContainer test target
 cd ansible && make test-deploy
@@ -35,6 +50,10 @@ cd ansible && make test-deploy
 
 # Install Ansible Galaxy collections (required before first run)
 cd ansible && ansible-galaxy collection install -r requirements.yml
+
+# Create Samba 1Password item (run once before first samba deploy)
+op item create --vault OpenClaw --category login \
+  --title "Samba" credential="$(op generate-password)"
 
 # Deploy daily S3 backup cron job (run once after provisioning)
 ansible-playbook -i ansible/inventory/hosts.yml ansible/backup.yml
@@ -57,6 +76,7 @@ pre-commit run ansible-lint       # Run only ansible-lint
 3. **`onepassword`** — 1Password CLI installation
 4. **`openclaw_config`** — deploys `openclaw.json`, `.env` (via `op inject`), systemd service, and logrotate
 5. **`openclaw_gateway_proxy`** — optional Nginx HTTPS reverse proxy for LAN access
+6. **`openclaw_samba`** — optional Samba share exposing `/home/openclaw/uploads/` to the LAN subnet
 
 ### Standalone Playbooks
 
@@ -143,6 +163,7 @@ Multi-value items use descriptive field names.
 | `OpenAI` | `credential` | OpenAI API key |
 | `OpenRouter API Credentials` | `credential` | OpenRouter API key |
 | `Telegram Bot` | `credential` | Telegram bot token |
+| `Samba` | `credential` | Samba share password for the openclaw user |
 | `Service Account Auth Token` | `credential` | 1Password service account token for CI/CD |
 
 **Naming rules:**

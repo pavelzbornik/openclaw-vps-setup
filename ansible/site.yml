@@ -181,6 +181,47 @@
       tags:
         - always
 
+    - name: Fetch Samba password from 1Password
+      ansible.builtin.command: >-
+        op read
+        "op://{{ openclaw_samba_password_vault }}/{{ openclaw_samba_password_item }}/{{ openclaw_samba_password_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: samba_password_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when:
+        - openclaw_samba_enabled | default(false)
+        - openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set openclaw_samba_password from 1Password (falls back to vault)
+      ansible.builtin.set_fact:
+        openclaw_samba_password: "{{ samba_password_op.stdout | trim }}"
+      when:
+        - samba_password_op is not skipped
+        - samba_password_op.rc | default(1) == 0
+        - samba_password_op.stdout | default('') | trim | length > 0
+      no_log: true
+      tags:
+        - always
+
+    - name: Set openclaw_samba_password from vault (fallback)
+      ansible.builtin.set_fact:
+        openclaw_samba_password: "{{ vault_openclaw_samba_password }}"
+      when:
+        - openclaw_samba_enabled | default(false)
+        - openclaw_samba_password is not defined
+        - vault_openclaw_samba_password is defined
+      no_log: true
+      tags:
+        - always
+
     - name: Display target host information
       debug:
         msg: |
@@ -239,6 +280,13 @@
         - gateway
         - nginx
         - lan
+
+    - role: openclaw_samba
+      tags:
+        - openclaw
+        - samba
+        - lan
+      when: openclaw_samba_enabled | default(false)
 
   post_tasks:
     - name: Verify OpenClaw installation
