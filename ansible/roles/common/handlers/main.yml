@@ -2,7 +2,7 @@
 # Handlers for common role
 # (fail2ban handler removed — upstream firewall-linux handles fail2ban)
 
-- name: Restart sshd
+- name: Restart ssh
   service:
-    name: sshd
+    name: ssh
     state: restarted

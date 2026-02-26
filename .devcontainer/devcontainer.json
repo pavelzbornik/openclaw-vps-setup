@@ -15,8 +15,8 @@
   // Environment variables
   "remoteEnv": {
     "TERM": "dumb",
-    "PRE_COMMIT_HOME": "/workspaces/openclaw-vps-setup/.cache/pre-commit"
-    // "OP_SERVICE_ACCOUNT_TOKEN": "${localEnv:OP_SERVICE_ACCOUNT_TOKEN}"
+    "PRE_COMMIT_HOME": "/workspaces/openclaw-vps-setup/.cache/pre-commit",
+    "OP_SERVICE_ACCOUNT_TOKEN": "${localEnv:OP_SERVICE_ACCOUNT_TOKEN}"
   },
 
   // Features to add to the dev container
@@ -24,6 +24,9 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest",
       "moby": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "latest"
     },
     "ghcr.io/devcontainers/features/git:1": {
       "version": "latest"
@@ -83,9 +86,6 @@
       "onAutoForward": "notify"
     }
   },
-
-  // Comment out to connect as root instead
-  "remoteUser": "vscode",
 
   // Keep container running for better performance
   "runServices": ["ansible-control", "ubuntu-target"],

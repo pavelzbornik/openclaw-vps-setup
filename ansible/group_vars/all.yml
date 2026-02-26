@@ -123,7 +123,9 @@ openclaw_env_vars:
 # 1Password service account token (reused by backup.yml and openclaw_config role)
 # Set OP_SERVICE_ACCOUNT_TOKEN in your shell — the deploy script passes it via -e.
 # Vault fallback: vault_openclaw_op_service_account_token in group_vars/vault.yml (legacy).
-openclaw_op_service_account_token: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') | default(vault_openclaw_op_service_account_token | default(''), true) }}"  # pragma: allowlist secret
+_op_token_env: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"  # pragma: allowlist secret
+_op_token_vault: "{{ vault_openclaw_op_service_account_token | default('') }}"  # pragma: allowlist secret
+openclaw_op_service_account_token: "{{ _op_token_env | default(_op_token_vault, true) }}"  # pragma: allowlist secret
 openclaw_op_service_account_token_vault: "OpenClaw"  # pragma: allowlist secret
 openclaw_op_service_account_token_item: "Service Account Auth Token"  # pragma: allowlist secret
 openclaw_op_service_account_token_field: "credential"  # pragma: allowlist secret
@@ -158,6 +160,18 @@ openclaw_gateway_token_vault: "OpenClaw"
 openclaw_gateway_token_item: "OpenClaw Gateway"
 openclaw_gateway_token_field: "credential"
 
+# 1Password-backed OpenClaw identity/user content
+openclaw_content_vault: "OpenClaw"
+openclaw_content_item: "OpenClaw"
+openclaw_content_identity_md_field: "identity_md"
+openclaw_content_user_md_field: "user_md"
+
+# 1Password-backed Discord config (allowlist, guilds — lives in the discord bot token item)
+openclaw_discord_config_vault: "OpenClaw"
+openclaw_discord_config_item: "discord"
+openclaw_discord_config_allowlist_field: "allowlist"
+openclaw_discord_config_guilds_field: "guilds"
+
 # ─── Backup / Restore (S3 + 1Password) ───────────────────────────────────────
 
 # Backup: cron → encrypt → S3 upload
@@ -172,14 +186,15 @@ openclaw_s3_region: "us-east-1"
 
 # 1Password refs for backup encryption passphrase
 openclaw_backup_passphrase_vault: "OpenClaw"
-openclaw_backup_passphrase_item: "Backup Passphrase"
-openclaw_backup_passphrase_field: "credential"
+openclaw_backup_passphrase_item: "AWS Backup"
+openclaw_backup_passphrase_field: "passphrase"
 
 # 1Password refs for AWS credentials
 openclaw_aws_key_vault: "OpenClaw"
 openclaw_aws_key_item: "AWS Backup"
 openclaw_aws_access_key_field: "access_key_id"
 openclaw_aws_secret_key_field: "secret_access_key"  # pragma: allowlist secret
+openclaw_aws_s3_bucket_field: "s3_bucket"
 
 # For restore: pass on CLI with -e openclaw_restore_s3_path=s3://bucket/prefix/file.tgz.enc
 openclaw_restore_s3_path: ""

@@ -44,6 +44,116 @@
       tags:
         - always
 
+    - name: Fetch Discord allowlist from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_discord_config_vault }}/{{ openclaw_discord_config_item }}/{{ openclaw_discord_config_allowlist_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: discord_allowlist_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when: openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set vault_openclaw_discord_allowlist from 1Password
+      set_fact:
+        vault_openclaw_discord_allowlist: >-
+          {{ discord_allowlist_op.stdout | trim | split(',') | map('trim') | list }}
+      when:
+        - discord_allowlist_op is not skipped
+        - discord_allowlist_op.rc | default(1) == 0
+        - discord_allowlist_op.stdout | default('') | trim | length > 0
+      tags:
+        - always
+
+    - name: Fetch Discord guilds from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_discord_config_vault }}/{{ openclaw_discord_config_item }}/{{ openclaw_discord_config_guilds_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: discord_guilds_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when: openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set vault_openclaw_discord_guilds from 1Password
+      set_fact:
+        vault_openclaw_discord_guilds: >-
+          {{ discord_guilds_op.stdout | trim | split(',') | map('trim') | list }}
+      when:
+        - discord_guilds_op is not skipped
+        - discord_guilds_op.rc | default(1) == 0
+        - discord_guilds_op.stdout | default('') | trim | length > 0
+      tags:
+        - always
+
+    - name: Fetch IDENTITY.md content from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_content_vault }}/{{ openclaw_content_item }}/{{ openclaw_content_identity_md_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: identity_md_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when: openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set vault_openclaw_identity_md from 1Password
+      set_fact:
+        vault_openclaw_identity_md: "{{ identity_md_op.stdout }}"
+      when:
+        - identity_md_op is not skipped
+        - identity_md_op.rc | default(1) == 0
+        - identity_md_op.stdout | default('') | trim | length > 0
+      tags:
+        - always
+
+    - name: Fetch USER.md content from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_content_vault }}/{{ openclaw_content_item }}/{{ openclaw_content_user_md_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: user_md_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when: openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set vault_openclaw_user_md from 1Password
+      set_fact:
+        vault_openclaw_user_md: "{{ user_md_op.stdout }}"
+      when:
+        - user_md_op is not skipped
+        - user_md_op.rc | default(1) == 0
+        - user_md_op.stdout | default('') | trim | length > 0
+      tags:
+        - always
+
     - name: Display target host information
       debug:
         msg: |

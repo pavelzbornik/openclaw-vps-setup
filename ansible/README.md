@@ -122,8 +122,18 @@ At deploy time, the role renders `.env` with `op://...` references and runs `op 
 
 Required 1Password items/fields for unattended deploys include:
 
-- `OpenClaw / Service Account Auth Token / credential` (for `OP_SERVICE_ACCOUNT_TOKEN`)
-- `OpenClaw / OpenClaw Gateway / credential` (for `OPENCLAW_GATEWAY_TOKEN`)
+| Item | Field | Purpose |
+|------|-------|---------|
+| `Service Account Auth Token` | `credential` | `OP_SERVICE_ACCOUNT_TOKEN` for the deploy runner |
+| `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` injected into `.env` |
+| `discord` | `credential` | Discord bot token |
+| `discord` | `allowlist` | Comma-separated Discord user IDs |
+| `discord` | `guilds` | Comma-separated Discord guild IDs |
+| `OpenClaw` | `identity_md` | Agent identity content (IDENTITY.md) |
+| `OpenClaw` | `user_md` | User context content (USER.md) |
+| `Tailscale` | `credential` | Tailscale auth key (when `tailscale_enabled: true`) |
+
+All items live in the **OpenClaw** vault. See `CLAUDE.md` for the full item inventory.
 
 ### 5. Test with Molecule
 
