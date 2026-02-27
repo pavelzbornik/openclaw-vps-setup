@@ -58,7 +58,7 @@ The C4 parser (C4Context, C4Component) breaks on these characters inside
 
 Examples:
 
-```
+```mermaid
 # BAD
 Container(svc, "My Service", "Node.js (pnpm)", "Listens on port 3000 (loopback only)")
 Rel(a, b, "Injects via", "op inject → .env")
@@ -77,7 +77,7 @@ System_Boundary(vm, "Production VM - Hyper-V")
 Always provide a description as the third argument. Two-argument calls can cause
 undefined node sizing and layout failures.
 
-```
+```mermaid
 # BAD
 System_Ext(discord, "Discord API")
 
