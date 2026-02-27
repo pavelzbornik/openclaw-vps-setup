@@ -13,6 +13,7 @@ services:
     environment:
       - ANSIBLE_HOST_KEY_CHECKING=False
       - ANSIBLE_STDOUT_CALLBACK=yaml
+      - OP_SERVICE_ACCOUNT_TOKEN=${OP_SERVICE_ACCOUNT_TOKEN}
     working_dir: /workspaces/openclaw-vps-setup/ansible
 
   # Ubuntu target (simulates your VM)
