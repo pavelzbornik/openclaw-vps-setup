@@ -86,9 +86,10 @@ repos:
       - id: mermaid-lint
         name: Mermaid diagram validation
         language: node
-        entry: npx -y @probelabs/maid
+        entry: maid
         files: '\.md$'
         exclude: 'docs/research/.*\.md$'
+        additional_dependencies: ["@probelabs/maid@0.0.25"]
 
   # Security scanning
   - repo: https://github.com/Yelp/detect-secrets
@@ -106,13 +107,13 @@ repos:
         name: Terraform format check
         language: system
         entry: bash -c 'terraform fmt -check -diff terraform/discord/'
-        files: ^terraform/.*\.tf$
+        files: ^terraform/discord/.*\.tf$
         pass_filenames: false
       - id: terraform-validate
         name: Terraform validate
         language: system
         entry: bash -c 'cd terraform/discord && terraform validate'
-        files: ^terraform/.*\.tf$
+        files: ^terraform/discord/.*\.tf$
         pass_filenames: false
       - id: terraform-tflint
         name: Terraform lint (tflint)
@@ -120,7 +121,7 @@ repos:
         entry: bash -c 'command -v tflint >/dev/null 2>&1 ||
           { echo "tflint not found, skipping"; exit 0; };
           cd terraform/discord && tflint --config=../../.tflint.hcl'
-        files: ^terraform/.*\.tf$
+        files: ^terraform/discord/.*\.tf$
         pass_filenames: false
 
   # ── commit-msg ────────────────────────────────────────────────────────────────

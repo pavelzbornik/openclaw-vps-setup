@@ -27,6 +27,19 @@
     - openclaw
     - config
 
+- name: Assert runtime token is present before op inject
+  ansible.builtin.assert:
+    that:
+      - openclaw_op_runtime_token | default('') | trim | length > 0
+    fail_msg: "openclaw_op_runtime_token is not set — cannot run op inject without a valid runtime token"
+  no_log: true
+  when:
+    - not (ci_test | default(false))
+  tags:
+    - openclaw
+    - config
+    - 1password
+
 - name: Populate OpenClaw environment file via op inject
   become: true
   become_user: "{{ openclaw_user }}"
@@ -35,10 +48,7 @@
     --in-file "{{ openclaw_config_dir }}/.env.op"
     --out-file "{{ openclaw_config_dir }}/.env"
   environment:
-    OP_SERVICE_ACCOUNT_TOKEN: >-
-      {{ openclaw_op_runtime_token
-         if (openclaw_op_runtime_token | default('') | length > 0)
-         else openclaw_op_service_account_token }}
+    OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_runtime_token }}"
   no_log: true
   notify:
     - Restart openclaw

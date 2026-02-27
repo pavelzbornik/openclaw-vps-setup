@@ -247,7 +247,6 @@
       environment:
         OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
       changed_when: false
-      failed_when: false
       when: openclaw_op_service_account_token | length > 0
       tags:
         - always
