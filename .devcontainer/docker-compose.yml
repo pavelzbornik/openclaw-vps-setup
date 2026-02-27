@@ -11,7 +11,8 @@ services:
     networks:
       - ansible-test-network
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       - ANSIBLE_HOST_KEY_CHECKING=False
       - ANSIBLE_STDOUT_CALLBACK=yaml

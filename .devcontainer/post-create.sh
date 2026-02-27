@@ -94,6 +94,7 @@ setup_github_auth() {
         print_info "✓ GitHub CLI authenticated as $(gh api user -q .login)."
     else
         print_warn "GitHub CLI authentication failed."
+        return 1
     fi
 }
 
