@@ -200,6 +200,12 @@ Single-secret items use the `credential` field. Multi-value items use descriptiv
 
 > **Two-token model:** The deploy runner uses an *admin* service account token (`OP_SERVICE_ACCOUNT_TOKEN` env var / `vault_openclaw_op_service_account_token`) that has access to both vaults. At deploy time Ansible reads `OpenClaw Admin/OpenClaw Runtime SA/credential` with the admin token and writes that narrower runtime token to the VM. The VM's backup cron and `op inject` calls use only the runtime token, which is scoped exclusively to the `OpenClaw` vault.
 
+Items in the **OpenClaw Admin** vault:
+
+| Item | Fields | Purpose |
+|------|--------|---------|
+| `github-cli` | `credential` | GitHub fine-grained PAT for `gh` CLI in devcontainer (repo + PR + workflow access) |
+
 **Naming rules:**
 - Item names match the service they represent (e.g. `discord`, `Tailscale`, `OpenAI`)
 - OpenClaw-specific items are prefixed with `OpenClaw` or are named `OpenClaw`

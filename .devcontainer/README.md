@@ -67,6 +67,22 @@ This devcontainer provides a complete, isolated environment for testing the Open
 - Docker integration
 - Spell checker
 
+## Prerequisites
+
+### 1Password Secrets
+
+The following 1Password items must exist before rebuilding the devcontainer:
+
+| Vault | Item | Field | Required for |
+|-------|------|-------|-------------|
+| `OpenClaw Admin` | `github-cli` | `credential` | Auto-authenticating `gh` CLI |
+
+The `OP_SERVICE_ACCOUNT_TOKEN` environment variable (set in `.devcontainer/.env`) must grant
+**read access to the `OpenClaw Admin` vault** so that `post-create.sh` can fetch the GitHub token.
+
+The GitHub token stored in `OpenClaw Admin/github-cli/credential` must be a fine-grained PAT
+(or classic PAT with `repo` + `workflow` scopes) covering the repositories you work with.
+
 ## Quick Start
 
 ### 1. Open in DevContainer
