@@ -13,5 +13,7 @@ backup_passphrase = "change-me-use-a-strong-passphrase"
 # iam_user_name         = "openclaw-backup"
 # onepassword_vault     = "OpenClaw"  # pragma: allowlist secret
 # onepassword_aws_item  = "AWS Backup"  # pragma: allowlist secret
+# onepassword_admin_vault = "OpenClaw Admin"   # pragma: allowlist secret
+# onepassword_admin_item  = "github-cli"        # pragma: allowlist secret
 # enable_lifecycle      = true
 # backup_retention_days = 90

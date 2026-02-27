@@ -62,9 +62,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "backup" {
     id     = "expire-encrypted-backups"
     status = "Enabled"
 
-    filter {
-      suffix = ".tgz.enc"
-    }
+    filter {}
 
     expiration {
       days = var.backup_retention_days

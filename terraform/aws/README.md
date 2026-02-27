@@ -43,6 +43,21 @@ terraform apply
 
 After a successful apply, the `OpenClaw / AWS Backup` 1Password item will contain all four fields required by `ansible/backup.yml`.
 
+## Next steps
+
+After provisioning the S3 bucket with `terraform apply`:
+
+- **Deploy the backup cron job** — run `ansible/backup.yml` to install the daily encrypted backup job on the VM:
+  ```bash
+  ansible-playbook -i ansible/inventory/hosts.yml ansible/backup.yml
+  ```
+- **Restore from a backup** — run `ansible/restore.yml` with the S3 path for one-shot restores or migrations:
+  ```bash
+  ansible-playbook -i ansible/inventory/hosts.yml ansible/restore.yml \
+    -e openclaw_restore_s3_path=s3://your-bucket/openclaw/openclaw-TIMESTAMP.tgz.enc
+  ```
+- The `AWS Backup` item in the `OpenClaw` 1Password vault contains the credentials (`access_key_id`, `secret_access_key`, `s3_bucket`, `passphrase`) consumed by both playbooks.
+
 ## Variables
 
 | Variable | Default | Description |
