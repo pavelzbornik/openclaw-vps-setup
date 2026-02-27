@@ -28,14 +28,14 @@
       "version": "latest"
     },
     "ghcr.io/devcontainers/features/git:1": {
-      "version": "latest"
+      "version": "os-provided"
     },
     "ghcr.io/devcontainers/features/github-cli:1": {
-      "version": "latest"
+      "version": "2.67.0"
     },
     "ghcr.io/devcontainers/features/terraform:1": {
-      "version": "latest",
-      "tflint": "latest",
+      "version": "1.12.0",
+      "tflint": "0.55.0",
       "terragrunt": "none"
     }
   },
