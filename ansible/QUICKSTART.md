@@ -110,39 +110,57 @@ ansible all -i inventory/hosts.yml -m ping
 
 All secrets are stored in **1Password** — no Ansible Vault needed.
 
-### Required: 1Password Service Account
+### Required: 1Password Service Accounts (two-token model)
+
+Two separate service accounts are used to limit the blast radius of a compromised VM token:
+
+| SA | Vault access | Where it lives | Used by |
+|----|-------------|----------------|---------|
+| **Admin SA** | `OpenClaw` + `OpenClaw Admin` (read/write) | `$env:OP_SERVICE_ACCOUNT_TOKEN` in your shell / GitHub secret | Deploy runner, Terraform |
+| **Runtime SA** | `OpenClaw` only (read/write) | `OpenClaw Admin` vault → item `OpenClaw Runtime SA` → field `credential` | VM at runtime (backup cron, `op inject`) |
+
+**Setup steps:**
 
 1. Go to [my.1password.com](https://my.1password.com) → Settings → Service Accounts
-2. Create a service account with **read + write** access (write is only needed on first deploy to bootstrap items)
-3. Copy the `ops_...` token
+2. Create **Admin SA** with read/write access to both `OpenClaw` and `OpenClaw Admin` vaults
+3. Create **Runtime SA** with read/write access to `OpenClaw` vault only
+4. Store the Runtime SA token in 1Password:
 
-Set it in your PowerShell session before every deploy:
+```bash
+op item create --vault "OpenClaw Admin" --category login \
+  --title "OpenClaw Runtime SA" credential="ops_runtime-token-here"
+```
+
+5. Set the Admin SA token in your shell before every deploy:
 
 ```powershell
-$env:OP_SERVICE_ACCOUNT_TOKEN = "ops_your-token-here"
+$env:OP_SERVICE_ACCOUNT_TOKEN = "ops_admin-token-here"
 ```
+
+At deploy time Ansible uses the Admin SA token to read the Runtime SA token from `OpenClaw Admin` vault and write it to the VM. The VM's backup cron and `op inject` calls then use only the Runtime SA token.
 
 ### 1Password Items
 
 Run the bootstrap script once (before first deploy) to create the **OpenClaw** vault and all required items. Existing items are never overwritten.
 
 ```powershell
-$env:OP_SERVICE_ACCOUNT_TOKEN = "ops_your-token-here"
+$env:OP_SERVICE_ACCOUNT_TOKEN = "ops_admin-token-here"
 .\scripts\bootstrap-1password.ps1
 ```
 
 Then update the `PLACEHOLDER_*` values in 1Password with your real credentials before deploying:
 
-| 1Password Item | Field | Used for |
-| --- | --- | --- |
-| `Telegram Bot` | `credential` | `TELEGRAM_BOT_TOKEN` |
-| `discord` | `credential` | `DISCORD_BOT_TOKEN` |
-| `OpenAI` | `credential` | `OPENAI_API_KEY` |
-| `OpenRouter API Credentials` | `credential` | `OPENROUTER_API_KEY` |
-| `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` (auto-generated — no action needed) |
-| `Tailscale` | `credential` | Tailscale auth key for VPN |
-| `OpenClaw` | `vscode_ssh_key` | Your SSH public key for VS Code Remote SSH access (optional) |
-| `Samba` | `credential` | Samba share password — create before first samba deploy (see below) |
+| Vault | 1Password Item | Field | Used for |
+| --- | --- | --- | --- |
+| `OpenClaw` | `Telegram Bot` | `credential` | `TELEGRAM_BOT_TOKEN` |
+| `OpenClaw` | `discord` | `credential` | `DISCORD_BOT_TOKEN` |
+| `OpenClaw` | `OpenAI` | `credential` | `OPENAI_API_KEY` |
+| `OpenClaw` | `OpenRouter API Credentials` | `credential` | `OPENROUTER_API_KEY` |
+| `OpenClaw` | `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` (auto-generated — no action needed) |
+| `OpenClaw` | `Tailscale` | `credential` | Tailscale auth key for VPN |
+| `OpenClaw` | `OpenClaw` | `vscode_ssh_key` | Your SSH public key for VS Code Remote SSH access (optional) |
+| `OpenClaw` | `Samba` | `credential` | Samba share password — create before first samba deploy (see below) |
+| `OpenClaw Admin` | `OpenClaw Runtime SA` | `credential` | VM runtime token (scoped to `OpenClaw` vault only) |
 
 #### Samba share (optional, enabled by default)
 

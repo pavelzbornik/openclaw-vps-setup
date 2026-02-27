@@ -2,6 +2,41 @@
 
 Common issues and solutions when deploying OpenClaw with Ansible.
 
+## Table of Contents
+
+- [Connection Issues](#connection-issues)
+  - ["Failed to connect to the host via ssh"](#failed-to-connect-to-the-host-via-ssh)
+  - ["Permission denied (publickey)"](#permission-denied-publickey)
+- [Deployment Issues](#deployment-issues)
+  - ["docker: command not found" (Windows deploy)](#docker-command-not-found-windows-deploy)
+  - ["Mount denied" or volume sharing errors](#mount-denied-or-volume-sharing-errors-windows-deploy)
+  - ["Missing sudo password"](#missing-sudo-password)
+  - ["Package 'nodejs' has no installation candidate"](#package-nodejs-has-no-installation-candidate)
+  - ["Failed to install openclaw via pnpm"](#failed-to-install-openclaw-via-pnpm)
+  - ["Service failed to start"](#service-failed-to-start)
+- [Firewall Issues](#firewall-issues)
+  - ["UFW command failed"](#ufw-command-failed)
+  - ["Port 3000 not accessible"](#port-3000-not-accessible)
+- [1Password Issues](#1password-issues)
+  - ["op command not found"](#op-command-not-found)
+  - ["OP_SERVICE_ACCOUNT_TOKEN not set"](#op_service_account_token-not-set)
+  - ["OPENCLAW_GATEWAY_TOKEN missing"](#openclaw_gateway_token-missing)
+- [Molecule Issues](#molecule-issues)
+  - ["Docker not found"](#docker-not-found)
+  - ["Container creation failed"](#container-creation-failed)
+  - ["Verify stage fails"](#verify-stage-fails)
+- [Performance Issues](#performance-issues)
+  - ["Deployment is very slow"](#deployment-is-very-slow)
+  - ["VM is slow after deployment"](#vm-is-slow-after-deployment)
+- [Tailscale Issues](#tailscale-issues)
+  - ["Tailscale not authenticated"](#tailscale-not-authenticated)
+- [Recovery Procedures](#recovery-procedures)
+  - ["Deployment broke everything"](#deployment-broke-everything)
+  - ["Start fresh"](#start-fresh)
+- [Getting More Help](#getting-more-help)
+
+---
+
 ## Connection Issues
 
 ### "Failed to connect to the host via ssh"
