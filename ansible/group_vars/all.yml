@@ -120,15 +120,20 @@ openclaw_config:
 openclaw_env_vars:
   NODE_ENV: "production"
 
-# 1Password service account token (reused by backup.yml and openclaw_config role)
+# 1Password service account token (admin/deploy token — has access to both vaults).
 # Set OP_SERVICE_ACCOUNT_TOKEN in your shell — the deploy script passes it via -e.
 # Vault fallback: vault_openclaw_op_service_account_token in group_vars/vault.yml (legacy).
 _op_token_env: "{{ lookup('env', 'OP_SERVICE_ACCOUNT_TOKEN') }}"  # pragma: allowlist secret
 _op_token_vault: "{{ vault_openclaw_op_service_account_token | default('') }}"  # pragma: allowlist secret
 openclaw_op_service_account_token: "{{ _op_token_env | default(_op_token_vault, true) }}"  # pragma: allowlist secret
-openclaw_op_service_account_token_vault: "OpenClaw"  # pragma: allowlist secret
-openclaw_op_service_account_token_item: "Service Account Auth Token"  # pragma: allowlist secret
-openclaw_op_service_account_token_field: "credential"  # pragma: allowlist secret
+
+# Runtime SA token — scoped to OpenClaw vault only; written to the VM at deploy time.
+# Fetched from OpenClaw Admin vault at deploy time using the admin token above.
+# See CLAUDE.md "Two-token model" for rationale.
+openclaw_op_runtime_token: ""  # pragma: allowlist secret
+openclaw_op_runtime_token_vault: "OpenClaw Admin"  # pragma: allowlist secret
+openclaw_op_runtime_token_item: "OpenClaw Runtime SA"  # pragma: allowlist secret
+openclaw_op_runtime_token_field: "credential"  # pragma: allowlist secret
 
 # 1Password-backed OpenRouter API key settings
 openclaw_openrouter_api_key_vault: "OpenClaw"  # pragma: allowlist secret

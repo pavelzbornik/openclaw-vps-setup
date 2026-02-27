@@ -80,6 +80,16 @@ repos:
         args: ['--fix', '--disable', 'MD013', 'MD040', 'MD041', 'MD036']
         exclude: 'docs/research/.*\.md$'  # Exclude research documents
 
+  # Mermaid diagram validation
+  - repo: local
+    hooks:
+      - id: mermaid-lint
+        name: Mermaid diagram validation
+        language: node
+        entry: npx -y @probelabs/maid
+        files: '\.md$'
+        exclude: 'docs/research/.*\.md$'
+
   # Security scanning
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
@@ -87,6 +97,31 @@ repos:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
         exclude: '^terraform/discord/.*|package.lock.json'
+
+  # Terraform checks — local hooks using system terraform + tflint
+  # Recommended trio: fmt (style), validate (schema), tflint (best practices)
+  - repo: local
+    hooks:
+      - id: terraform-fmt
+        name: Terraform format check
+        language: system
+        entry: bash -c 'terraform fmt -check -diff terraform/discord/'
+        files: ^terraform/.*\.tf$
+        pass_filenames: false
+      - id: terraform-validate
+        name: Terraform validate
+        language: system
+        entry: bash -c 'cd terraform/discord && terraform validate'
+        files: ^terraform/.*\.tf$
+        pass_filenames: false
+      - id: terraform-tflint
+        name: Terraform lint (tflint)
+        language: system
+        entry: bash -c 'command -v tflint >/dev/null 2>&1 ||
+          { echo "tflint not found, skipping"; exit 0; };
+          cd terraform/discord && tflint --config=../../.tflint.hcl'
+        files: ^terraform/.*\.tf$
+        pass_filenames: false
 
   # ── commit-msg ────────────────────────────────────────────────────────────────
   # Enforce conventional commits format:
