@@ -133,6 +133,7 @@ Required 1Password items/fields for unattended deploys include:
 | `OpenClaw` | `user_md` | User context content (USER.md) |
 | `OpenClaw` | `vscode_ssh_key` | Developer SSH public key for VS Code Remote SSH (optional) |
 | `Tailscale` | `credential` | Tailscale auth key (when `tailscale_enabled: true`) |
+| `Samba` | `credential` | Samba share password for the `openclaw` user (when `openclaw_samba_enabled: true`) |
 
 All items live in the **OpenClaw** vault. See `CLAUDE.md` for the full item inventory.
 
@@ -180,6 +181,7 @@ ansible/
 │   ├── openclaw_vendor_base/ # Wrapper around the official openclaw-ansible submodule
 │   ├── openclaw_config/    # OpenClaw config templating and systemd
 │   ├── openclaw_gateway_proxy/ # Nginx HTTPS reverse proxy for LAN ingress
+│   ├── openclaw_samba/     # Samba file-drop share for LAN devices
 │   └── onepassword/        # 1Password CLI setup
 ├── molecule/
 │   └── default/            # Molecule test scenario
@@ -195,6 +197,7 @@ ansible/
 - **onepassword**: 1Password CLI for secrets management
 - **openclaw_config**: OpenClaw config templating (`openclaw.json`, `.env` via `op inject`) and systemd unit for unattended deploys
 - **openclaw_gateway_proxy**: Nginx HTTPS reverse proxy, LAN allowlist, and firewall rules for local network access
+- **openclaw_samba**: Samba share at `/home/openclaw/uploads/` for LAN file drops; restricted to `openclaw_lan_subnet`; password from 1Password `Samba` item
 
 Standalone playbooks:
 

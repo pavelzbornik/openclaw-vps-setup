@@ -1,0 +1,67 @@
+---
+- name: Install samba
+  ansible.builtin.apt:
+    name: samba
+    state: present
+    update_cache: true
+
+- name: Create uploads directory
+  ansible.builtin.file:
+    path: "{{ openclaw_samba_share_path }}"
+    state: directory
+    owner: "{{ openclaw_user }}"
+    group: "{{ openclaw_user }}"
+    mode: "0750"
+
+- name: Set Samba password for openclaw user
+  ansible.builtin.command: smbpasswd -a -s {{ openclaw_user }}
+  args:
+    stdin: "{{ openclaw_samba_password }}\n{{ openclaw_samba_password }}\n"
+  no_log: true
+  changed_when: true
+
+- name: Deploy smb.conf
+  ansible.builtin.template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: testparm -s %s
+  notify:
+    - Restart smbd
+    - Restart nmbd
+
+- name: Allow Samba UDP ports from LAN subnet
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: udp
+    src: "{{ openclaw_lan_subnet }}"
+    comment: "Samba (LAN)"
+  loop:
+    - "137"
+    - "138"
+
+- name: Allow Samba TCP ports from LAN subnet
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    src: "{{ openclaw_lan_subnet }}"
+    comment: "Samba (LAN)"
+  loop:
+    - "139"
+    - "445"
+
+- name: Ensure smbd is started and enabled
+  ansible.builtin.systemd:
+    name: smbd
+    state: started
+    enabled: true
+
+- name: Ensure nmbd is started and enabled
+  ansible.builtin.systemd:
+    name: nmbd
+    state: started
+    enabled: true

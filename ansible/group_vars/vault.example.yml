@@ -22,3 +22,6 @@ vault_openclaw_identity_md: |
 vault_openclaw_user_md: |
   # USER.md
   <!-- Replace with user context content -->
+
+# Samba share password for the openclaw user (fallback if 1Password is unavailable)
+vault_openclaw_samba_password: "REPLACE_ME_SAMBA_PASSWORD"  # pragma: allowlist secret

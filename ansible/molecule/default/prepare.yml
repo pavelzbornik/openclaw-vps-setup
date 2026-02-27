@@ -12,10 +12,19 @@
       wait_for_connection:
         timeout: 60
 
-    - name: Install Python3 for Ansible
-      raw: |
-        apt-get update
-        apt-get install -y python3 python3-apt sudo
+    - name: Check if Ansible Python prerequisites are installed
+      raw: dpkg -s python3 python3-apt sudo >/dev/null 2>&1
+      changed_when: false
+      failed_when: false
+      register: ansible_prereq_check
+
+    - name: Install Python prerequisites for Ansible
+      raw: DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-apt sudo
+      changed_when: false
+      when: ansible_prereq_check.rc != 0
+
+    - name: Clean apt cache to prevent stale package errors
+      raw: apt-get clean
       changed_when: false
 
     - name: Gather facts after Python installation
