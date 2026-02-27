@@ -141,6 +141,7 @@ Then update the `PLACEHOLDER_*` values in 1Password with your real credentials b
 | `OpenRouter API Credentials` | `credential` | `OPENROUTER_API_KEY` |
 | `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` (auto-generated — no action needed) |
 | `Tailscale` | `credential` | Tailscale auth key for VPN |
+| `OpenClaw` | `vscode_ssh_key` | Your SSH public key for VS Code Remote SSH access (optional) |
 
 ### Optional: `vault.yml` for non-sensitive config
 
@@ -219,7 +220,50 @@ sudo ss -tulpen | grep -E ':(80|443)'
 curl -kI https://openclaw.lan
 ```
 
-## 7) Common Validation Commands
+## 7) VS Code Remote SSH Access (Optional)
+
+You can browse and edit `/home/openclaw` directly in VS Code using the Remote SSH extension.
+
+### Store your SSH public key in 1Password
+
+```bash
+op item edit "OpenClaw" --vault OpenClaw \
+  "vscode_ssh_key=$(cat ~/.ssh/id_ed25519.pub)"
+```
+
+### Deploy the vendor role to write `authorized_keys`
+
+```bash
+# Linux/WSL
+cd ansible && bash scripts/deploy.sh --tags vendor
+
+# PowerShell
+cd ansible
+.\scripts\deploy-windows.ps1 -Tags vendor
+```
+
+### Configure `~/.ssh/config`
+
+```sshconfig
+Host openclaw-vps
+  HostName 192.168.1.151
+  User openclaw
+  IdentityFile ~/.ssh/id_ed25519
+```
+
+### Connect
+
+VS Code → Command Palette (`F1`) → **Remote-SSH: Connect to Host** → `openclaw-vps`.
+
+VS Code Server installs itself automatically into `/home/openclaw/.vscode-server/` on first connect.
+
+### Verify
+
+```bash
+ssh openclaw@192.168.1.151 'cat ~/.ssh/authorized_keys'
+```
+
+## 8) Common Validation Commands
 
 From Ansible host:
 

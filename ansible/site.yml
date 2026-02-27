@@ -154,6 +154,33 @@
       tags:
         - always
 
+    - name: Fetch VS Code SSH key from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_content_vault }}/{{ openclaw_content_item }}/{{ openclaw_content_vscode_ssh_key_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: vscode_ssh_key_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      failed_when: false
+      when: openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set openclaw_ssh_keys from 1Password
+      set_fact:
+        openclaw_ssh_keys: "{{ (openclaw_ssh_keys | default([])) | union([vscode_ssh_key_op.stdout | trim]) }}"
+      when:
+        - vscode_ssh_key_op is not skipped
+        - vscode_ssh_key_op.rc | default(1) == 0
+        - vscode_ssh_key_op.stdout | default('') | trim | length > 0
+      tags:
+        - always
+
     - name: Display target host information
       debug:
         msg: |

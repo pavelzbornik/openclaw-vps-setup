@@ -131,6 +131,7 @@ Required 1Password items/fields for unattended deploys include:
 | `discord` | `guilds` | Comma-separated Discord guild IDs |
 | `OpenClaw` | `identity_md` | Agent identity content (IDENTITY.md) |
 | `OpenClaw` | `user_md` | User context content (USER.md) |
+| `OpenClaw` | `vscode_ssh_key` | Developer SSH public key for VS Code Remote SSH (optional) |
 | `Tailscale` | `credential` | Tailscale auth key (when `tailscale_enabled: true`) |
 
 All items live in the **OpenClaw** vault. See `CLAUDE.md` for the full item inventory.
