@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.1](https://github.com/pavelzbornik/openclaw-vps-setup/compare/v0.2.0...v0.2.1) (2026-02-28)
+
+
+### Changed
+
+* replace Makefile + bash scripts with Justfile ([#20](https://github.com/pavelzbornik/openclaw-vps-setup/issues/20)) ([ebef9c7](https://github.com/pavelzbornik/openclaw-vps-setup/commit/ebef9c7faf2d2f0aa9cbc08ad5033a4e5a73cd06))
+
 ## [0.2.0](https://github.com/pavelzbornik/openclaw-vps-setup/compare/v0.1.0...v0.2.0) (2026-02-28)
 
 
