@@ -48,6 +48,12 @@ jobs:
             "ansible-lint==${{ env.ANSIBLE_LINT_VERSION }}" \
             "ansible-core==${{ env.ANSIBLE_CORE_VERSION }}"
 
+      # terraform-fmt and terraform-validate hooks use language: system
+      - name: Install Terraform for pre-commit hooks
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.12.0"
+
       - name: Install Ansible Galaxy collections
         working-directory: ansible
         run: ansible-galaxy collection install -r requirements.yml
