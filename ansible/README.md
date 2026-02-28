@@ -70,8 +70,8 @@ Test everything in an isolated container environment without touching your PC:
 
    ```bash
    # From repo root
-   ./test-deploy.sh --check  # Dry-run
-   ./test-deploy.sh          # Deploy to test container
+   just test-deploy check=true   # Dry-run
+   just test-deploy              # Deploy to test container
    ```
 
 3. **Verify**
@@ -91,7 +91,7 @@ Follow the full step-by-step in [QUICKSTART.md](QUICKSTART.md). In short:
 2. Set up SSH keys to the VM
 3. Deploy from either:
    - `scripts/deploy-windows.ps1` (PowerShell + Docker), or
-   - `scripts/deploy.sh` (Linux/WSL shell)
+   - `just deploy` (Linux/WSL shell)
 
 ### 2. Configure Inventory
 
@@ -233,10 +233,9 @@ Standalone playbooks:
 Test in a real Ubuntu container with systemd:
 
 ```bash
-# In devcontainer
-./test-deploy.sh --check   # Dry-run
-./test-deploy.sh           # Deploy
-make test-deploy           # Alternative
+# In devcontainer (from repo root)
+just test-deploy check=true   # Dry-run
+just test-deploy              # Deploy
 ```
 
 ### Molecule Testing
@@ -294,8 +293,8 @@ molecule test
 
 1. Create VM snapshot: `ssh windows-host "powershell.exe Checkpoint-VM -Name OpenClaw-VM"`
 2. Test in Molecule: `molecule test`
-3. Dry-run on VM: `./scripts/deploy.sh --check -vv` or `./scripts/deploy-windows.ps1 -Check`
-4. Deploy: `./scripts/deploy.sh` or `./scripts/deploy-windows.ps1`
+3. Dry-run on VM: `just check` or `./scripts/deploy-windows.ps1 -Check`
+4. Deploy: `just deploy` or `./scripts/deploy-windows.ps1`
 5. Verify: SSH to VM and check services
 
 ## Maintenance

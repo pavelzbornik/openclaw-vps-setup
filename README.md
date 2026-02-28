@@ -51,7 +51,7 @@ Test the complete setup in an isolated container environment:
 1. Open this repo in VS Code
 2. Install "Dev Containers" extension
 3. Press F1 → "Dev Containers: Reopen in Container"
-4. Run `./test-deploy.sh` in the integrated terminal
+4. Run `just test-deploy` in the integrated terminal
 
 See **[.devcontainer/README.md](.devcontainer/README.md)** for details.
 
@@ -105,20 +105,19 @@ Linux/WSL shell:
 
 ```bash
 # Setup SSH access
-cd ansible
-./scripts/setup-ssh.sh
+just ssh-setup
 
 # Test with Molecule (Docker validation)
-make test
+just test
 
 # Deploy to VM
-make deploy
+just deploy
 
 # View logs
-make logs
+just logs
 
 # Check service status
-make status
+just status
 ```
 
 Windows PowerShell (no WSL shell):

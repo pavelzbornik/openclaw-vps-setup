@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
     # Other utilities
     ca-certificates \
     gnupg \
+    just \
     lsb-release \
     software-properties-common \
     && rm -rf /var/lib/apt/lists/*
