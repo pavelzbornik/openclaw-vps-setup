@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker info:*)",
+      "Bash(molecule:*)",
+      "Bash(sudo docker info:*)",
+      "Bash(pip install:*)",
+      "Bash(sudo chmod:* /workspaces/openclaw-vps-setup/*)",
+      "Bash(ansible-galaxy collection install:*)",
+      "Bash(ANSIBLE_FORCE_COLOR=1 PY_COLORS=1 molecule test:*)",
+      "Bash(git submodule:*)",
+      "Bash(ansible --version:*)",
+      "Bash(python3:*)",
+      "Bash(pip show:*)",
+      "Bash(MOLECULE_NO_LOG=false molecule converge:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(ansible-lint:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git -C:*)"
+    ]
+  }
+}
