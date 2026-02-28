@@ -1,18 +1,3 @@
-terraform {
-  required_version = ">= 1.0"
-
-  required_providers {
-    discord = {
-      source  = "Lucky3028/discord"
-      version = "~> 1.7"
-    }
-    onepassword = {
-      source  = "1Password/onepassword"
-      version = "~> 1.4"
-    }
-  }
-}
-
 # 1Password provider configuration
 # Uses OP_SERVICE_ACCOUNT_TOKEN environment variable
 provider "onepassword" {}
