@@ -68,6 +68,42 @@
       tags:
         - always
 
+    - name: Fetch OpenClaw runtime SA token from 1Password
+      command: >-
+        op read
+        "op://{{ openclaw_op_runtime_token_vault }}/{{ openclaw_op_runtime_token_item }}/{{ openclaw_op_runtime_token_field }}"
+      delegate_to: localhost
+      run_once: true
+      become: false
+      no_log: true
+      register: runtime_token_op
+      environment:
+        OP_SERVICE_ACCOUNT_TOKEN: "{{ openclaw_op_service_account_token }}"
+      changed_when: false
+      when: openclaw_op_service_account_token | length > 0
+      tags:
+        - always
+
+    - name: Set openclaw_op_runtime_token from 1Password
+      set_fact:
+        openclaw_op_runtime_token: "{{ runtime_token_op.stdout | trim }}"
+      when:
+        - runtime_token_op is not skipped
+        - runtime_token_op.rc | default(1) == 0
+        - runtime_token_op.stdout | default('') | trim | length > 0
+      no_log: true
+      tags:
+        - always
+
+    - name: Assert runtime token is present
+      ansible.builtin.assert:
+        that:
+          - openclaw_op_runtime_token | default('') | trim | length > 0
+        fail_msg: "openclaw_op_runtime_token is empty — cannot proceed with backup without a valid runtime token"
+      no_log: true
+      tags:
+        - always
+
   tasks:
     - name: Install awscli
       apt:
@@ -101,7 +137,7 @@
       copy:
         dest: "{{ openclaw_backup_env_file }}"
         content: |
-          export OP_SERVICE_ACCOUNT_TOKEN={{ openclaw_op_service_account_token }}
+          export OP_SERVICE_ACCOUNT_TOKEN={{ openclaw_op_runtime_token }}
         owner: root
         group: root
         mode: '0600'
