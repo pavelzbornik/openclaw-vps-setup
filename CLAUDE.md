@@ -15,6 +15,7 @@ When implementing any new feature, role, playbook, or variable, **always update 
 | `CLAUDE.md` — 1Password Item Structure | New 1Password vault item added |
 | `CLAUDE.md` — Common Commands | New deploy tag or one-time setup command added |
 | `docs/firewall.md` | New ports opened by UFW |
+| `Justfile` | New recipe added to task runner |
 
 ## Project Purpose
 
@@ -22,34 +23,40 @@ Infrastructure-as-Code for automated provisioning and deployment of the OpenClaw
 
 ## Common Commands
 
-All Ansible commands run from the `ansible/` directory (or use `make` targets which handle this):
+All task-runner commands use `just` from the repo root (no `cd ansible/` needed):
 
 ```bash
+# Install just (if not yet available)
+sudo apt-get install -y just        # Ubuntu/Debian
+# or: curl -sSL https://just.systems/install.sh | bash -s -- --to ~/.local/bin
+
+# Install Ansible and dependencies (first-time setup)
+just install
+
+# Install Ansible Galaxy collections only
+just galaxy
+
 # Run Molecule tests (Docker required)
-cd ansible && molecule test
+just test
 
 # Lint playbooks
-cd ansible && ansible-lint site.yml
+just lint
 
 # Dry-run deployment
-cd ansible && make check
+just check
 
 # Deploy to production VM
-cd ansible && make deploy
+just deploy
 
 # Deploy only specific roles (use tags)
-cd ansible && make deploy TAGS=openclaw
-cd ansible && make deploy TAGS=common
-cd ansible && make deploy TAGS=vendor
-cd ansible && make deploy TAGS=samba
+just deploy tags=openclaw
+just deploy tags=common
+just deploy tags=vendor
+just deploy tags=samba
 
 # Deploy to DevContainer test target
-cd ansible && make test-deploy
-# or from repo root:
-./test-deploy.sh --check
-
-# Install Ansible Galaxy collections (required before first run)
-cd ansible && ansible-galaxy collection install -r requirements.yml
+just test-deploy
+just test-deploy check=true   # dry-run
 
 # Create OpenClaw Runtime SA item in OpenClaw Admin vault (run once before first deploy)
 # Replace ops_runtime-token with the actual Runtime SA token from 1Password Settings
@@ -61,11 +68,10 @@ op item create --vault OpenClaw --category login \
   --title "Samba" credential="$(op generate-password)"
 
 # Deploy daily S3 backup cron job (run once after provisioning)
-ansible-playbook -i ansible/inventory/hosts.yml ansible/backup.yml
+just backup
 
 # Restore from S3 backup (one-shot migration/restore)
-ansible-playbook -i ansible/inventory/hosts.yml ansible/restore.yml \
-  -e openclaw_restore_s3_path=s3://my-bucket/openclaw/openclaw-TIMESTAMP.tgz.enc
+just restore s3://my-bucket/openclaw/openclaw-TIMESTAMP.tgz.enc
 
 # Provision Discord server channels (run once before first Ansible deploy)
 cd terraform/discord && terraform init && terraform apply

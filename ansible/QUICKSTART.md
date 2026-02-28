@@ -174,7 +174,7 @@ op item create --vault OpenClaw --category login \
 Then deploy (or redeploy) with the `samba` tag:
 
 ```bash
-cd ansible && make deploy TAGS=samba
+just deploy tags=samba
 ```
 
 ### Optional: `vault.yml` for non-sensitive config
@@ -208,11 +208,11 @@ Notes:
 
 ### Linux/WSL shell
 
-From `ansible/` directory:
+From repo root:
 
 ```bash
-./scripts/deploy.sh --check -vv
-./scripts/deploy.sh
+just check    # dry-run
+just deploy
 ```
 
 ## 6) Post-Deployment VM Tasks
@@ -280,7 +280,7 @@ op item edit "OpenClaw" --vault OpenClaw \
 
 ```bash
 # Linux/WSL
-cd ansible && bash scripts/deploy.sh --tags vendor
+just deploy tags=vendor
 
 # PowerShell
 cd ansible
