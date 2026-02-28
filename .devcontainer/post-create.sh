@@ -67,6 +67,37 @@ install_claude_cli() {
     return 0
 }
 
+setup_github_auth() {
+    if gh auth status &>/dev/null; then
+        print_info "GitHub CLI is already authenticated."
+        return 0
+    fi
+
+    if ! command -v op &>/dev/null; then
+        print_warn "op CLI not found; skipping GitHub auth setup."
+        return 1
+    fi
+
+    if [ -z "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
+        print_warn "OP_SERVICE_ACCOUNT_TOKEN not set; skipping GitHub auth setup."
+        return 1
+    fi
+
+    print_info "Authenticating GitHub CLI via 1Password..."
+    local gh_token
+    gh_token=$(op read "op://OpenClaw Admin/github-cli/credential" 2>/dev/null) || {
+        print_warn "Could not read GitHub token from 1Password (OpenClaw Admin/github-cli); skipping."
+        return 1
+    }
+
+    if echo "$gh_token" | gh auth login --with-token; then
+        print_info "✓ GitHub CLI authenticated as $(gh api user -q .login)."
+    else
+        print_warn "GitHub CLI authentication failed."
+        return 1
+    fi
+}
+
 import_host_ssh_keys() {
     local host_ssh_dir="$HOME/.ssh-host"
     local container_ssh_dir="$HOME/.ssh"
@@ -269,6 +300,8 @@ CCLAUDE_ALIAS='alias cclaude="IS_SANDBOX=1 claude --dangerously-skip-permissions
 grep -qF 'alias cclaude' ~/.bashrc 2>/dev/null || echo "$CCLAUDE_ALIAS" >> ~/.bashrc || true
 grep -qF 'alias cclaude' ~/.zshrc 2>/dev/null || echo "$CCLAUDE_ALIAS" >> ~/.zshrc || true
 
+# Authenticate GitHub CLI via 1Password (non-fatal if token unavailable)
+setup_github_auth || true
 
 # Print completion message
 echo ""

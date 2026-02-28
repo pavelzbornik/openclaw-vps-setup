@@ -10,6 +10,9 @@ services:
     command: sleep infinity
     networks:
       - ansible-test-network
+    env_file:
+      - path: .env
+        required: false
     environment:
       - ANSIBLE_HOST_KEY_CHECKING=False
       - ANSIBLE_STDOUT_CALLBACK=yaml
