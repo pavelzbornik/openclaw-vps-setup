@@ -32,7 +32,9 @@ openclaw-vps-setup/
 │   └── vendor/
 │       └── Hyper-V-Automation/ # fdcastel/Hyper-V-Automation submodule
 ├── .devcontainer/              # VS Code DevContainer (control + target nodes)
-├── terraform/                  # Discord IaC (optional)
+├── terraform/                  # IaC modules (optional)
+│   ├── discord/               # Discord server channels
+│   └── aws/                   # S3 backup bucket + IAM user
 └── docs/                       # Project guides and references
     ├── README.md               # Docs index
     ├── hyperv-setup.md         # Hyper-V VM setup (automated)
@@ -94,6 +96,7 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 | [docs/firewall.md](docs/firewall.md) | Firewall and network controls |
 | [docs/backup-restore.md](docs/backup-restore.md) | Backup and restore guide |
 | [docs/discord-terraform.md](docs/discord-terraform.md) | Discord IaC overview |
+| [terraform/aws/README.md](terraform/aws/README.md) | S3 backup bucket provisioning |
 | [docs/PRE_COMMIT_SETUP.md](docs/PRE_COMMIT_SETUP.md) | Pre-commit hooks setup and usage |
 
 ## 🔧 Common Commands

@@ -2,6 +2,42 @@
 
 This devcontainer provides a complete, isolated environment for testing the OpenClaw Ansible deployment without affecting your local PC.
 
+## Table of Contents
+
+- [What's Included](#whats-included)
+  - [Control Node (Your Dev Environment)](#control-node-your-dev-environment)
+  - [Target Node (Simulated VM)](#target-node-simulated-vm)
+  - [VS Code Extensions](#vs-code-extensions)
+- [Quick Start](#quick-start)
+  - [1. Open in DevContainer](#1-open-in-devcontainer)
+  - [2. Verify Setup](#2-verify-setup)
+  - [3. Test Deployment](#3-test-deployment)
+  - [4. Access the Target Container](#4-access-the-target-container)
+  - [5. Run Molecule Tests](#5-run-molecule-tests)
+- [Container Network Details](#container-network-details)
+- [Common Tasks](#common-tasks)
+  - [View OpenClaw Logs](#view-openclaw-logs)
+  - [Check Service Status](#check-service-status)
+  - [Restart OpenClaw](#restart-openclaw)
+  - [Reset Target Container](#reset-target-container)
+  - [Run Specific Roles](#run-specific-roles)
+- [Differences from Production VM](#differences-from-production-vm)
+- [Troubleshooting](#troubleshooting)
+  - [Container won't start](#container-wont-start)
+  - [SSH connection fails](#ssh-connection-fails)
+  - [Ansible can't connect](#ansible-cant-connect)
+  - [Molecule tests fail](#molecule-tests-fail)
+  - [OpenClaw won't install](#openclaw-wont-install)
+- [Development Workflow](#development-workflow)
+- [Performance Tips](#performance-tips)
+- [Accessing from Host](#accessing-from-host)
+  - [SSH to Target](#ssh-to-target)
+  - [OpenClaw Gateway](#openclaw-gateway)
+- [Benefits of DevContainer Testing](#benefits-of-devcontainer-testing)
+- [Limitations](#limitations)
+
+---
+
 ## What's Included
 
 ### Control Node (Your Dev Environment)

@@ -2,6 +2,30 @@
 
 This directory contains Ansible playbooks and roles for automated provisioning of OpenClaw on Ubuntu VMs.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+  - [Option 1: DevContainer Testing](#option-1-devcontainer-testing-easiest)
+  - [Option 2: Production Deployment](#option-2-production-deployment)
+  - [2. Configure Inventory](#2-configure-inventory)
+  - [3. Setup SSH Key](#3-setup-ssh-key)
+  - [4. Configure Secrets](#4-configure-secrets)
+  - [5. Test with Molecule](#5-test-with-molecule)
+  - [6. Deploy to VM](#6-deploy-to-vm)
+- [Structure](#structure)
+- [Roles](#roles)
+  - [DevContainer Testing](#devcontainer-testing-recommended)
+  - [Molecule Testing](#molecule-testing)
+  - [Comparison](#comparison)
+- [Testing](#testing)
+- [Deployment Workflow](#deployment-workflow)
+- [Maintenance](#maintenance)
+- [Troubleshooting](#troubleshooting)
+- [Security Notes](#security-notes)
+
+---
+
 ## Prerequisites
 
 ### Target VM (Ubuntu)
@@ -122,20 +146,20 @@ At deploy time, the role renders `.env` with `op://...` references and runs `op 
 
 Required 1Password items/fields for unattended deploys include:
 
-| Item | Field | Purpose |
-|------|-------|---------|
-| `Service Account Auth Token` | `credential` | `OP_SERVICE_ACCOUNT_TOKEN` for the deploy runner |
-| `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` injected into `.env` |
-| `discord` | `credential` | Discord bot token |
-| `discord` | `allowlist` | Comma-separated Discord user IDs |
-| `discord` | `guilds` | Comma-separated Discord guild IDs |
-| `OpenClaw` | `identity_md` | Agent identity content (IDENTITY.md) |
-| `OpenClaw` | `user_md` | User context content (USER.md) |
-| `OpenClaw` | `vscode_ssh_key` | Developer SSH public key for VS Code Remote SSH (optional) |
-| `Tailscale` | `credential` | Tailscale auth key (when `tailscale_enabled: true`) |
-| `Samba` | `credential` | Samba share password for the `openclaw` user (when `openclaw_samba_enabled: true`) |
+| Vault | Item | Field | Purpose |
+|-------|------|-------|---------|
+| `OpenClaw Admin` | `OpenClaw Runtime SA` | `credential` | VM runtime token (scoped to `OpenClaw` vault; written to VM at deploy time) |
+| `OpenClaw` | `OpenClaw Gateway` | `credential` | `OPENCLAW_GATEWAY_TOKEN` injected into `.env` |
+| `OpenClaw` | `discord` | `credential` | Discord bot token |
+| `OpenClaw` | `discord` | `allowlist` | Comma-separated Discord user IDs |
+| `OpenClaw` | `discord` | `guilds` | Comma-separated Discord guild IDs |
+| `OpenClaw` | `OpenClaw` | `identity_md` | Agent identity content (IDENTITY.md) |
+| `OpenClaw` | `OpenClaw` | `user_md` | User context content (USER.md) |
+| `OpenClaw` | `OpenClaw` | `vscode_ssh_key` | Developer SSH public key for VS Code Remote SSH (optional) |
+| `OpenClaw` | `Tailscale` | `credential` | Tailscale auth key (when `tailscale_enabled: true`) |
+| `OpenClaw` | `Samba` | `credential` | Samba share password for the `openclaw` user (when `openclaw_samba_enabled: true`) |
 
-All items live in the **OpenClaw** vault. See `CLAUDE.md` for the full item inventory.
+The deploy runner uses an **Admin SA token** (`OP_SERVICE_ACCOUNT_TOKEN` env var) with access to both vaults. The VM runtime uses a **Runtime SA token** (scoped to `OpenClaw` vault only), fetched from `OpenClaw Admin` at deploy time. See `CLAUDE.md` for the full item inventory.
 
 ### 5. Test with Molecule
 
@@ -302,11 +326,11 @@ ansible-inventory -i inventory/hosts.yml --list
 **1Password secrets not working:**
 
 ```bash
-# Verify 1Password access on VM (token comes from ansible-vault variable)
+# Verify 1Password access on VM (runtime token should only show OpenClaw vault)
 op vault list
 
 # Test inject syntax against a reference
-printf 'TEST=op://OpenClaw/Service Account Auth Token/credential\n' | op inject
+printf 'TEST=op://OpenClaw/OpenClaw Gateway/credential\n' | op inject
 ```
 
 **Molecule tests failing:**
@@ -327,6 +351,6 @@ molecule login
 - SSH keys should have 0600 permissions
 - Never commit secrets to git
 - Use ansible-vault for sensitive variables
-- 1Password service account token is read from `vault_openclaw_op_service_account_token`
+- Deploy uses an admin service account token (`OP_SERVICE_ACCOUNT_TOKEN` / `vault_openclaw_op_service_account_token`); the VM runtime uses a narrower token fetched from `OpenClaw Admin/OpenClaw Runtime SA` and scoped to the `OpenClaw` vault only
 - UFW is configured by upstream submodule tasks when `vendor_firewall_enabled` is true
 - OpenClaw port exposure depends on upstream firewall rules
