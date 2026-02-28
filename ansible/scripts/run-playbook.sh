@@ -51,19 +51,21 @@ if ! command -v ansible-playbook &>/dev/null; then
 fi
 
 # ── Connectivity check ───────────────────────────────────────────────────────
-info "Testing connectivity..."
-if ansible all -i "$INVENTORY" -m ping; then
-    info "✓ All hosts reachable"
-else
-    error "✗ One or more hosts unreachable"
-    exit 1
+if [[ "${SKIP_PING:-false}" != "true" ]]; then
+    info "Testing connectivity..."
+    if ansible all -i "$INVENTORY" -m ping; then
+        info "✓ All hosts reachable"
+    else
+        error "✗ One or more hosts unreachable"
+        exit 1
+    fi
+    echo
 fi
-echo
 
 # ── Galaxy requirements ──────────────────────────────────────────────────────
-if [[ -f "${ANSIBLE_DIR}/requirements.yml" ]]; then
-    info "Installing Galaxy requirements..."
-    ansible-galaxy collection install -r "${ANSIBLE_DIR}/requirements.yml"
+if [[ -f "${ANSIBLE_DIR}/requirements.yml" && "${FORCE_GALAXY:-false}" == "true" ]]; then
+    info "Installing Galaxy requirements (forced)..."
+    ansible-galaxy collection install -r "${ANSIBLE_DIR}/requirements.yml" --force
     echo
 fi
 

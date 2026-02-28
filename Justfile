@@ -8,9 +8,9 @@ inventory     := ansible_dir / "inventory/hosts.yml"
 test_inventory := ansible_dir / "inventory/test-container.yml"
 run_playbook  := ansible_dir / "scripts/run-playbook.sh"
 
-vm_host := "192.168.1.151"
-vm_user := "openclaw"
-vm_key  := "~/.ssh/openclaw_vm"
+vm_host := env_var_or_default("OPENCLAW_VM_HOST", "192.168.1.151")
+vm_user := env_var_or_default("OPENCLAW_VM_USER", "openclaw")
+vm_key  := env_var_or_default("OPENCLAW_VM_KEY", "~/.ssh/openclaw_vm")
 
 # ── Default ──────────────────────────────────────────────────────────────────
 
