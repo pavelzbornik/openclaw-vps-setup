@@ -14,8 +14,7 @@ This guide walks you through setting up 1Password to securely manage your Discor
    - Description: `Service account for managing Discord infrastructure with Terraform`
 
 3. **Configure Permissions**
-   - Grant access to the vault containing your Discord credentials
-   - Recommended: Create a dedicated "Infrastructure" vault
+   - Grant access to the **OpenClaw** vault
    - Set permissions to **Read** only (Terraform only needs to read secrets)
 
 4. **Save the Token**
@@ -23,31 +22,31 @@ This guide walks you through setting up 1Password to securely manage your Discor
    - **CRITICAL**: Save this token securely - you cannot retrieve it again!
    - Store it temporarily in a secure note or password manager
 
-## Step 2: Create Discord Credentials Item in 1Password
+## Step 2: Update the `discord` Item in 1Password
 
-1. **Open 1Password**
-   - Navigate to the vault you granted access to (e.g., "Infrastructure")
+The `discord` item already exists in the **OpenClaw** vault with the bot token and user allowlist.
+You need to add the `server_id` field containing your Discord server (guild) ID.
 
-2. **Create New Item**
-   - Click **New Item** > **Login** (or **Password**)
-   - Title: `Discord OpenClaw Bot`
+1. **Find your Discord Server ID**
+   - Enable Developer Mode in Discord: **Settings** > **Advanced** > **Developer Mode**
+   - Right-click your server icon, then click **Copy Server ID**
 
-3. **Add Required Fields**
-   Configure the item with these exact field names:
+2. **Update the `discord` item**
+   ```bash
+   op item edit discord --vault OpenClaw "server_id[text]=YOUR_DISCORD_SERVER_ID"
+   ```
+   Replace `YOUR_DISCORD_SERVER_ID` with the ID you copied.
 
-   - **username**: Your Discord bot token
-     - Example: `MTIzNDU2Nzg5MDEyMzQ1Njc4.GhABCD.1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ`
-     - Get this from: https://discord.com/developers/applications
+3. **Verify the item has all required fields**
+   ```bash
+   op item get discord --vault OpenClaw
+   ```
 
-   - **password**: Your Discord server (guild) ID
-     - Example: `1234567890123456789`
-     - To find: Enable Developer Mode in Discord, right-click server, "Copy Server ID"
-
-4. **Optional: Add Notes**
-   - Add notes about the bot's purpose, permissions, or server details
-   - Document when the bot token was created
-
-5. **Save the Item**
+   The item should have these fields:
+   - **credential** — your Discord bot token (already set)
+   - **server_id** — your Discord server (guild) ID ← add/update this
+   - **allowlist** — comma-separated user IDs (used by OpenClaw at runtime)
+   - **guilds** — comma-separated guild IDs (used by OpenClaw at runtime)
 
 ## Step 3: Verify 1Password Setup
 
@@ -69,10 +68,10 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1pass
 sudo apt update && sudo apt install 1password-cli
 
 # Test access
-op item get "Discord OpenClaw Bot" --vault "Infrastructure"
+op item get "discord" --vault "OpenClaw"
 ```
 
-Expected output should show your item details.
+Expected output should show your item details including the `server_id` field.
 
 ## Step 4: Configure Terraform
 
@@ -92,8 +91,8 @@ Expected output should show your item details.
 
    Create `terraform.tfvars`:
    ```hcl
-   onepassword_vault        = "Infrastructure"
-   onepassword_discord_item = "Discord OpenClaw Bot"
+   onepassword_vault        = "OpenClaw"
+   onepassword_discord_item = "discord"
    ```
 
 ## Step 5: Initialize and Run Terraform
@@ -111,6 +110,21 @@ terraform plan
 terraform apply
 ```
 
+## Step 6: Enable Discord in OpenClaw (post-Terraform)
+
+After Terraform creates the Discord channels, enable the bot in Ansible:
+
+1. Edit `ansible/group_vars/all.yml`:
+   ```yaml
+   discord:
+     enabled: true
+   ```
+
+2. Re-deploy:
+   ```bash
+   cd ansible && make deploy TAGS=openclaw
+   ```
+
 ## Troubleshooting
 
 ### Error: "item not found"
@@ -118,10 +132,10 @@ terraform apply
 **Problem**: Terraform can't find the 1Password item.
 
 **Solutions**:
-- Verify item name matches exactly: `Discord OpenClaw Bot`
-- Check vault name is correct: `Infrastructure`
-- Ensure service account has access to the vault
-- Run: `op item get "Discord OpenClaw Bot" --vault "Infrastructure"` to test
+- Verify item name matches exactly: `discord`
+- Check vault name is correct: `OpenClaw`
+- Ensure service account has access to the **OpenClaw** vault
+- Run: `op item get "discord" --vault "OpenClaw"` to test
 
 ### Error: "unauthorized"
 
@@ -134,13 +148,13 @@ terraform apply
 
 ### Error: "field not found"
 
-**Problem**: Required fields (username/password) missing from 1Password item.
+**Problem**: Required fields missing from 1Password item.
 
 **Solutions**:
-- Open item in 1Password
-- Verify **username** field contains bot token
-- Verify **password** field contains server ID
-- Field names are case-sensitive
+- Open the `discord` item in 1Password
+- Verify **credential** field contains the bot token
+- Verify **server_id** field contains your Discord server ID (not a comma-separated list)
+- Run: `op item edit discord --vault OpenClaw "server_id[text]=YOUR_SERVER_ID"`
 
 ### Error: "missing provider"
 
@@ -178,7 +192,7 @@ Add to GitLab CI/CD Variables:
 
 1. **Principle of Least Privilege**
    - Service account should only have READ access
-   - Limit to specific vaults needed for Terraform
+   - Limit to the **OpenClaw** vault only
    - Don't grant admin permissions
 
 2. **Token Rotation**
@@ -193,7 +207,6 @@ Add to GitLab CI/CD Variables:
 
 4. **Separate Environments**
    - Use different service accounts for dev/staging/prod
-   - Use different vaults for each environment
    - Never share tokens between environments
 
 5. **Token Storage**
@@ -201,22 +214,3 @@ Add to GitLab CI/CD Variables:
    - Use environment variables or CI/CD secrets
    - Don't store in plain text files
    - Don't share via email or chat
-
-## Alternative: Using 1Password CLI with Terraform
-
-If you prefer not to use service accounts, you can use the 1Password CLI with your personal account:
-
-```bash
-# Sign in to 1Password CLI
-eval $(op signin)
-
-# Run Terraform with op run wrapper
-op run --env-file=".env.1password" -- terraform apply
-```
-
-Create `.env.1password`:
-```
-OP_SERVICE_ACCOUNT_TOKEN=op://Infrastructure/Discord OpenClaw Bot/credential
-```
-
-This approach is good for local development but service accounts are recommended for CI/CD.

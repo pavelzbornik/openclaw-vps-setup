@@ -3,10 +3,12 @@
 # NEVER commit terraform.tfvars to version control!
 
 # 1Password vault name where Discord secrets are stored
-onepassword_vault = "Infrastructure"
+onepassword_vault = "OpenClaw"
 
 # 1Password item name containing Discord credentials
 # This item should have fields:
-# - username: bot_token (with your Discord bot token)
-# - password or text field: server_id (with your Discord server ID)
-onepassword_discord_item = "Discord OpenClaw Bot"
+# - credential: your Discord bot token
+# - server_id: your Discord server (guild) ID (single ID, not a list)
+# - allowlist: comma-separated user IDs (used by OpenClaw at runtime)
+# - guilds: comma-separated guild IDs (used by OpenClaw at runtime)
+onepassword_discord_item = "discord"

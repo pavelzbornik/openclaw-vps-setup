@@ -8,13 +8,19 @@ data "onepassword_item" "discord_bot" {
   title = var.onepassword_discord_item
 }
 
-provider "discord" {
-  token = data.onepassword_item.discord_bot.username
+# Extract custom fields from 1Password item by label.
+# The discord item uses API_CREDENTIAL category — custom fields are exposed via
+# section[*].field[*], not as top-level attributes like .username/.password.
+locals {
+  _discord_fields = {
+    for field in flatten([for s in data.onepassword_item.discord_bot.section : s.field]) :
+    field.label => field.value
+  }
+  discord_server_id = local._discord_fields["server_id"]
 }
 
-# Local value for server ID from 1Password
-locals {
-  discord_server_id = data.onepassword_item.discord_bot.password
+provider "discord" {
+  token = local._discord_fields["credential"]
 }
 
 # AI WORKSPACE Category

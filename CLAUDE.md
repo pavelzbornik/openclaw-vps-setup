@@ -155,7 +155,7 @@ Multi-value items use descriptive field names.
 
 | Item | Fields | Purpose |
 |------|--------|---------|
-| `discord` | `credential`, `allowlist`, `guilds` | Discord bot token; comma-separated user allowlist and guild IDs |
+| `discord` | `credential`, `server_id`, `allowlist`, `guilds` | Discord bot token, server ID, and comma-separated user allowlist and guild IDs |
 | `OpenClaw` | `identity_md`, `user_md`, `vscode_ssh_key` | Agent identity (IDENTITY.md), user context (USER.md), and developer SSH public key for VS Code Remote SSH |
 | `OpenClaw Gateway` | `credential` | Auto-generated gateway API token |
 | `AWS Backup` | `access_key_id`, `secret_access_key`, `s3_bucket`, `passphrase` | S3 credentials and backup encryption passphrase |

@@ -1,0 +1,19 @@
+# Copy to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit it.
+
+# S3 bucket name — must be globally unique across all AWS accounts
+bucket_name = "openclaw-backups-yourname"
+
+# Passphrase used by the backup script to encrypt archives (AES-256-CBC).
+# Generate a strong passphrase and keep a copy somewhere safe.
+backup_passphrase = "change-me-use-a-strong-passphrase"
+
+# Optional overrides (defaults are usually fine):
+# aws_region            = "us-east-1"
+# iam_user_name         = "openclaw-backup"
+# onepassword_vault     = "OpenClaw"  # pragma: allowlist secret
+# onepassword_aws_item  = "AWS Backup"  # pragma: allowlist secret
+# onepassword_admin_vault = "OpenClaw Admin"   # pragma: allowlist secret
+# onepassword_admin_item  = "github-cli"        # pragma: allowlist secret
+# enable_lifecycle      = true
+# backup_retention_days = 90
