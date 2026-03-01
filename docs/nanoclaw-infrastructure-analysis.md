@@ -139,15 +139,17 @@ infrastructure overhead.
 **Current:** `powershell/New-OpenClawVM.ps1` creates a full Hyper-V Ubuntu VM
 using the `fdcastel/Hyper-V-Automation` submodule.
 
-**With Nanoclaw:** A full VM is over-engineering. Replace with either:
+**With Nanoclaw:** A full VM is over-engineering. The same server already
+runs a 12-service media stack (Radarr, Sonarr, Jellyfin, etc.) in Docker
+on WSL2 **without VM isolation** — validating Docker + WSL2 as the trusted
+deployment model. Nanoclaw, with its smaller attack surface, fits the same
+model.
 
-- **WSL2 setup script**: `wsl --install -d Ubuntu-24.04` + initial
-  configuration (Docker, Node.js, 1Password CLI, git clone nanoclaw)
-- **Docker Compose**: A `docker-compose.yml` that runs Nanoclaw with
-  restricted networking and volume mounts
+**Recommended replacement**: A setup script that installs Nanoclaw natively
+in the existing Ubuntu WSL2 distro (see section 9). No new VM, no new
+distro — Nanoclaw runs alongside the media stack management layer.
 
-The `Hyper-V-Automation` submodule becomes obsolete. The PowerShell script
-could be replaced with a much simpler WSL2 provisioning script.
+The `Hyper-V-Automation` submodule and `New-OpenClawVM.ps1` become obsolete.
 
 ### 4.2 Ansible and the IaC Model — NEEDS RETHINKING
 
@@ -317,22 +319,29 @@ awscli. Ansible-deployed restore playbook.
 
 - **Data to back up changes**: SQLite database + `groups/*/CLAUDE.md` per-group
   memory files (not `~/.openclaw/`)
-- **S3 mechanism is still valid** if cloud backup is desired
-- **Delivery mechanism changes**: Simple shell script instead of Ansible
-  playbook. Could be a cron job in WSL2 or a scheduled task in Windows.
+- **Dual-target strategy**: NAS (daily, fast recovery) + S3 (weekly,
+  off-site disaster recovery). See section 9.5 for details.
+- **NAS backup via rclone**: Already installed in WSL2 for the media stack's
+  Synology mounts — zero additional tooling needed
+- **Delivery mechanism changes**: Simple shell script adapting the media
+  stack's `backup-configs.sh` rotation pattern (keep last 7). Cron job
+  in WSL2.
 - **1Password integration**: `op run` injects AWS credentials and passphrase
   at backup time (same concept, simpler execution)
 
-The `terraform/aws` module that provisions the S3 bucket and IAM user
-remains useful.
+The `terraform/aws` module remains useful for provisioning the S3 off-site
+backup bucket. The Synology NAS serves as the primary (fast) backup tier.
 
 ### 4.6 Terraform Modules
 
 #### terraform/aws — PARTIALLY OBSOLETE
 
-S3 bucket + IAM user + lifecycle rules for backups. The infrastructure is
-still valid if cloud backups continue. The 1Password credential auto-write
-may need adjustment for the simplified single-token model.
+S3 bucket + IAM user + lifecycle rules for backups. With the dual-target
+backup strategy (NAS primary + S3 off-site), S3 becomes the weekly
+disaster-recovery tier rather than the only backup target. The module
+remains useful for provisioning the bucket but is less critical — NAS
+handles day-to-day recovery. The 1Password credential auto-write may need
+adjustment for the two-vault model.
 
 #### terraform/discord — STILL RELEVANT
 
@@ -360,12 +369,13 @@ changes:
 
 | Current recipe | Nanoclaw equivalent |
 |----------------|---------------------|
-| `just deploy` | `just setup` (run setup script/docker build) |
+| `just deploy` | `just setup` (run setup script) |
 | `just test` | `just test` (different test framework) |
-| `just logs` | `just logs` (docker logs or journal) |
-| `just status` | `just status` (process/container status) |
-| `just backup` | `just backup` (run backup script) |
-| `just restore` | `just restore s3://...` (run restore script) |
+| `just logs` | `just logs` → `journalctl --user -u nanoclaw -f` |
+| `just status` | `just status` → `systemctl --user status nanoclaw` |
+| `just backup` | `just backup` (NAS + S3 dual-target script) |
+| `just restore` | `just restore [nas\|s3://...]` |
+| `just update` | `just update` → `git pull && npm install && systemctl --user restart nanoclaw` |
 | `just ssh` | Not needed (local execution) |
 | `just lint` | Keep if repo has lintable files |
 
@@ -559,26 +569,149 @@ the application and the deployment model.
 
 ```
 nanoclaw-setup/
-├── setup.sh                  # WSL2 provisioning (Docker, Node.js, op CLI)
+├── setup.sh                  # WSL2 setup (Node.js, op CLI, git clone, systemd unit)
 ├── nanoclaw.env.op           # 1Password runtime secret references
 ├── claude-code.env.op        # 1Password admin secret references (Claude Code)
 ├── nanoclaw.service          # systemd user unit with op run wrapper
-├── backup.sh                 # S3 encrypted backup script
-├── restore.sh                # S3 restore script
-├── Justfile                  # start, stop, logs, backup, restore, update
+├── backup.sh                 # NAS (rclone) + S3 (awscli) dual-target backup
+├── restore.sh                # Restore from NAS or S3
+├── Justfile                  # start, stop, logs, backup, restore, update, status
 ├── .devcontainer/            # Optional: isolated Claude Code dev environment
 │   └── devcontainer.json     # DevContainer with Admin vault token only
 ├── terraform/
 │   ├── discord/              # Discord channel provisioning (reused)
-│   └── aws/                  # S3 backup bucket (reused)
+│   └── aws/                  # S3 backup bucket — off-site tier (reused)
 ├── .github/workflows/ci.yml  # Lint + Terraform validate
 └── docs/
 ```
+
+No `docker-compose.yml` for Nanoclaw itself — it runs natively in WSL2.
+Agent containers are managed by Nanoclaw's `container-runner.ts` directly
+via the Docker daemon that the media stack already provides.
 
 This is roughly **12–15 files** replacing the current repository's **60+**.
 
 The Terraform modules (`discord/`, `aws/`) could be carried forward directly.
 Everything else would be rewritten from scratch — not refactored.
+
+## 9. Media Server Stack Synergies
+
+The Win11 Server runs a media stack (Radarr, Sonarr, Prowlarr, Jellyfin,
+Bazarr, Calibre-Web, and more) in Docker on Ubuntu WSL2, with media stored
+on a Synology DiskStation NAS. This existing infrastructure creates
+significant reuse opportunities for Nanoclaw.
+
+### 9.1 Docker vs Native WSL2 — Critical Security Finding
+
+Since Nanoclaw does not publish Docker images, running it in Docker requires
+a custom-built image. More critically, Nanoclaw's `container-runner.ts`
+spawns Docker containers for agent execution, which requires access to the
+Docker daemon — typically via mounting `/var/run/docker.sock`.
+
+**The Docker socket mount creates a cross-service risk.** A compromised
+Nanoclaw orchestrator with Docker socket access could inspect, stop, or
+modify any container on the host — including the entire media stack
+(Radarr, Sonarr, Jellyfin, Calibre-Web).
+
+| Approach | Orchestrator isolation | Agent isolation | Docker socket risk | Update mechanism |
+|----------|----------------------|-----------------|-------------------|-----------------|
+| **Native WSL2** | Process-level (systemd user unit) | Docker containers via daemon | Normal — process uses Docker CLI like any user | `git pull && npm install && systemctl --user restart nanoclaw` |
+| **Custom Docker** | Container-level | Docker-in-Docker or socket mount | **Elevated — full Docker daemon control** | Rebuild image, restart container |
+
+**Recommendation: Native WSL2 + systemd user unit.** The Docker approach
+provides marginal orchestrator isolation but introduces a worse risk (Docker
+socket exposure to other services). Native WSL2 is simpler, more secure,
+and easier to update from git.
+
+### 9.2 WSL2 Distro: Same vs Separate
+
+The media stack management already runs from Ubuntu WSL2 (rclone NAS
+mounts, `docker compose` commands). Should Nanoclaw share this distro?
+
+| Aspect | Same distro | Separate distro |
+|--------|------------|-----------------|
+| Isolation | Shared filesystem, network | Separate filesystem, but shared kernel |
+| NAS access | Already mounted via rclone | Must configure mounts separately |
+| Docker | Shared daemon | Shared daemon anyway (single WSL2 VM) |
+| Complexity | Zero additional setup | Extra distro, duplicate tool installs |
+| Secret scoping | `op run` token scoping | Filesystem boundary adds defense-in-depth |
+
+**Key insight**: WSL2 runs all distros in a **single shared Linux VM**.
+A separate distro provides filesystem isolation but shares kernel, network
+stack, and Docker daemon. The isolation gain is modest — the `op run` token
+scoping (different SA tokens per context) provides the meaningful secret
+separation.
+
+**Recommendation**: Same distro. Simpler operationally, and the two-vault
+1Password model provides adequate secret isolation regardless of filesystem
+layout.
+
+### 9.3 Reusable Infrastructure
+
+| Existing service | Reusable? | Integration approach |
+|-----------------|-----------|---------------------|
+| Docker Desktop (WSL2 backend) | **Yes** | Nanoclaw's agent containers use the existing Docker daemon directly |
+| Ubuntu WSL2 distro | **Yes** | Nanoclaw runs natively in the same distro |
+| rclone FUSE NAS mounts | **Yes** | Daily backup to Synology NAS via existing rclone installation |
+| Uptime Kuma | **Yes** | Monitor `nanoclaw.service` via systemd status check or custom push |
+| Homepage | **Partial** | Docker widget shows agent containers; custom widget for systemd service (no HTTP API) |
+| Home Assistant | **Yes** | Nanoclaw integrates via HA REST API (same pattern as OpenClaw) |
+| Backup script pattern | **Yes** | Adapt `backup-configs.sh` rotation logic for Nanoclaw data |
+
+**Not reusable:**
+
+| Service | Why not |
+|---------|---------|
+| Watchtower | Nanoclaw has no published Docker image to auto-update |
+| Media `docker-compose.yml` | Nanoclaw runs natively, not as a Docker service |
+
+### 9.4 Logging Integration
+
+Nanoclaw's logging is **undocumented** — the project FAQ recommends an
+"AI-native" approach: ask Claude Code about recent logs. For operational
+monitoring, the following applies:
+
+- **Orchestrator logs**: Captured by systemd journal when running as a
+  user unit. View with `journalctl --user -u nanoclaw`.
+- **Agent container logs**: Captured by Docker's log driver. View with
+  `docker logs <container-id>`.
+- **SQLite**: Stores messages, groups, sessions, and state — serves as a
+  structured activity log.
+- **Justfile integration**: `just logs` wraps `journalctl --user -u nanoclaw -f`
+  (parallels `docker compose logs -f <service>` for the media stack).
+
+This creates two log channels on the same server — `docker compose logs`
+for media services and `journalctl` for Nanoclaw. Both are accessible from
+the same WSL2 terminal.
+
+### 9.5 Backup Strategy: NAS + S3 Dual Target
+
+The Synology DiskStation is already on the LAN with rclone configured. This
+enables a dual-target backup strategy:
+
+| Tier | Target | Frequency | Purpose | Tool |
+|------|--------|-----------|---------|------|
+| **Local** | Synology NAS | Daily | Fast recovery, low latency | rclone (already installed) |
+| **Off-site** | AWS S3 | Weekly | Disaster recovery, geographic redundancy | awscli + GPG encryption |
+
+**Data to back up:**
+
+- `nanoclaw/db/` — SQLite database (messages, state)
+- `nanoclaw/groups/*/CLAUDE.md` — per-group agent memory files
+- `nanoclaw/.env.op` — 1Password reference file (no secrets, but useful)
+- `nanoclaw/src/` — fork customizations (also in git, but belt-and-suspenders)
+
+**Backup script** adapts the media stack's `backup-configs.sh` pattern:
+tar + GPG encrypt, rclone to NAS, optional S3 upload, rotation (keep last 7).
+
+### 9.6 Validation: Docker + WSL2 as the Standard Model
+
+The media stack proves that **Docker + WSL2 is the established, trusted
+deployment model** on this server. Twelve containerized services run
+continuously without VM isolation. This validates the same approach for
+Nanoclaw — if the media stack (with its network-facing Jellyfin, Prowlarr
+API ports, and NAS mounts) is trusted in Docker + WSL2, Nanoclaw (with no
+inbound ports and mandatory agent containerization) is at least as safe.
 
 ## Appendix: Full Classification Summary
 
