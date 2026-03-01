@@ -96,6 +96,7 @@ See **[ansible/QUICKSTART.md](ansible/QUICKSTART.md)** for complete step-by-step
 | [docs/firewall.md](docs/firewall.md) | Firewall and network controls |
 | [docs/backup-restore.md](docs/backup-restore.md) | Backup and restore guide |
 | [docs/discord-terraform.md](docs/discord-terraform.md) | Discord IaC overview |
+| [docs/nanoclaw-infrastructure-analysis.md](docs/nanoclaw-infrastructure-analysis.md) | Nanoclaw migration fitness analysis |
 | [terraform/aws/README.md](terraform/aws/README.md) | S3 backup bucket provisioning |
 | [docs/PRE_COMMIT_SETUP.md](docs/PRE_COMMIT_SETUP.md) | Pre-commit hooks setup and usage |
 
