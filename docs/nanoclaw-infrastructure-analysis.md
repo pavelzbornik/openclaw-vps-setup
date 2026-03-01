@@ -28,7 +28,7 @@ currently runs inside a **Hyper-V Ubuntu VM** for isolation.
 
 ## 2. Executive Summary
 
-**8 OBSOLETE, 2 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 7 NEEDS RETHINKING.**
+**7 OBSOLETE, 2 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 8 NEEDS RETHINKING.**
 
 The Hyper-V VM was a justified security control for OpenClaw but is
 over-engineering for Nanoclaw. Nanoclaw eliminates OpenClaw's largest attack
@@ -41,8 +41,10 @@ hardening) that the full VM required.
 
 The entire Ansible stack, both upstream submodules, the DevContainer/Molecule
 testing infrastructure, and the Nginx/Samba roles become obsolete. What
-survives: the Justfile concept (retooled), 1Password integration (simplified),
-backup/restore (redelivered as scripts), the Discord Terraform module, and
+survives: the Justfile concept (retooled), the 1Password two-vault model
+(with different boundaries — runtime vs. Claude Code/Terraform),
+backup/restore (redelivered as scripts), the Discord Terraform module,
+the DevContainer concept (repurposed for Claude Code isolation), and
 some pre-commit hooks.
 
 ## 3. Security and Isolation Deep Dive
@@ -245,33 +247,66 @@ file sharing needed. Files are local to the device.
 
 **With Nanoclaw:**
 
-The two-token model was solving a **remote deployment** problem — the admin
-token fetches the runtime token at deploy time and writes it to the VM.
-With local execution, this indirection is unnecessary.
+Nanoclaw introduces **three distinct security contexts** that need
+separate secret scoping:
 
-**Simplified model:**
+1. **Nanoclaw orchestrator** — the runtime process needs bot tokens and
+   LLM API keys to function. These are production secrets.
+2. **Claude Code** — the development tool used to customize/modify the
+   Nanoclaw fork. It needs its own Anthropic API key and possibly a
+   GitHub PAT. It should NOT have access to production bot tokens.
+3. **Terraform/provisioning** — AWS Admin credentials for S3 bucket
+   provisioning. High-privilege, used infrequently.
 
-- **Single vault** (`Nanoclaw` or reuse `OpenClaw`)
-- **Single token** — runtime SA token, used locally via `op run`
+The two-vault model survives but with **different boundaries**:
+
+| Vault | Purpose | Who accesses it |
+|-------|---------|-----------------|
+| **Nanoclaw** (runtime) | Bot tokens, LLM API keys for the orchestrator, backup credentials | Nanoclaw process via `op run` |
+| **Nanoclaw Admin** (operator) | Claude Code API key, GitHub PAT, AWS Admin credentials, Terraform state | Developer/Claude Code, Terraform |
+
+**Why two vaults, not one:**
+
+- **Least privilege**: The Nanoclaw runtime token should only access bot
+  tokens and API keys — not development credentials or AWS admin keys.
+  If the orchestrator process is compromised (e.g., via a messaging
+  library vulnerability), the blast radius is limited to runtime secrets.
+- **Claude Code isolation**: Claude Code modifies the Nanoclaw codebase.
+  It should have its own API key but not production bot tokens. A
+  compromised or hallucinating Claude Code session should not be able to
+  exfiltrate Discord/Telegram credentials.
+- **Terraform isolation**: AWS Admin credentials can provision/destroy
+  infrastructure. They should never be accessible to the runtime process
+  or to Claude Code.
+
+**Two-token model changes:**
+
+The current model distributes tokens via Ansible (admin token fetches
+runtime token at deploy time, writes it to the VM). With local execution,
+this indirection simplifies — both tokens are stored locally on the Win11
+host, and each context uses its own token via `op run`.
+
+- **Ansible Vault eliminated** — no encrypted group vars to manage
 - **`op run`** replaces `op inject` — no secrets written to disk at all
-- **Ansible Vault eliminated** — no encrypted vars to manage
 
-**Vault item changes:**
+**Vault item migration:**
 
-| Item | Action |
-|------|--------|
-| `discord` | Keep — bot token, server_id, allowlist, guilds |
-| `Telegram Bot` | Keep — bot token |
-| `OpenAI` | Keep or remove (depends on Nanoclaw's LLM provider) |
-| `Anthropic` | **Add** — Nanoclaw uses Claude natively |
-| `AWS Backup` | Keep if S3 backup continues |
-| `OpenClaw` | Remove — identity_md/user_md/vscode_ssh_key are OpenClaw-specific |
-| `OpenClaw Gateway` | Remove — no gateway |
-| `OpenRouter API Credentials` | Review — keep if Nanoclaw uses OpenRouter |
-| `Tailscale` | Remove unless Tailscale used for Win11 host management |
-| `Samba` | Remove |
-| `OpenClaw Runtime SA` (Admin vault) | Simplify — single token replaces two-token model |
-| `AWS Admin` (Admin vault) | Keep if Terraform provisions S3 bucket |
+| Current item | Vault | Action |
+|--------------|-------|--------|
+| `discord` | Runtime | Keep — bot token, server_id, allowlist, guilds |
+| `Telegram Bot` | Runtime | Keep — bot token |
+| `Anthropic` | Runtime | **Add** — Nanoclaw uses Claude natively for orchestrator LLM |
+| `AWS Backup` | Runtime | Keep if S3 backup continues |
+| `OpenAI` | Runtime | Review — keep only if Nanoclaw uses OpenAI |
+| `OpenRouter API Credentials` | Runtime | Review — keep if Nanoclaw uses OpenRouter |
+| `OpenClaw` | — | Remove — identity_md/user_md/vscode_ssh_key are OpenClaw-specific |
+| `OpenClaw Gateway` | — | Remove — no gateway |
+| `Tailscale` | — | Remove unless Tailscale used for Win11 host management |
+| `Samba` | — | Remove |
+| `Claude Code` | Admin | **Add** — Anthropic API key for Claude Code development tool |
+| `github-cli` | Admin | Keep — GitHub PAT for fork management |
+| `AWS Admin` | Admin | Keep if Terraform provisions S3 bucket |
+| `Nanoclaw Runtime SA` | Admin | **Add** — runtime SA token (replaces `OpenClaw Runtime SA`) |
 
 ### 4.5 Backup and Restore — NEEDS RETHINKING
 
@@ -345,15 +380,20 @@ changes:
 - **New**: Could add Docker build test, shellcheck for setup scripts,
   Terraform validation
 
-### 4.10 DevContainer and Molecule Testing — OBSOLETE
+### 4.10 DevContainer and Molecule Testing — NEEDS RETHINKING
 
 **Current:** Docker Compose with control node + Ubuntu target, simulating
 Ansible-over-SSH deployment. Molecule tests role convergence in Docker.
 
-**With Nanoclaw:** Both exist to test Ansible playbooks against a simulated
-VM. Without Ansible and without a VM, neither has a purpose. If the repo
-retains a Dockerfile or setup scripts, testing becomes a simple
-`docker build` in CI.
+**With Nanoclaw:** Molecule and the Ansible-specific DevContainer config are
+obsolete. However, the **DevContainer concept itself may survive** — it could
+be repurposed as an isolated Claude Code development environment for
+modifying the Nanoclaw fork (see section 6.3). The DevContainer would
+provide a reproducible environment with only the Admin vault token,
+ensuring Claude Code cannot access runtime secrets.
+
+Molecule testing has no equivalent need — there are no Ansible roles to
+converge-test.
 
 ### 4.11 Pre-commit Hooks — PARTIALLY OBSOLETE
 
@@ -396,26 +436,28 @@ Key difference: OpenClaw configures channels declaratively in
 
 ## 6. 1Password Integration for Nanoclaw
 
-Nanoclaw does not natively support 1Password. Integration approach:
+Nanoclaw does not natively support 1Password. Two separate integration
+points are needed — one for the **runtime orchestrator** and one for
+**Claude Code** development.
 
-**Startup wrapper using `op run`:**
+### 6.1 Runtime Orchestrator (Nanoclaw vault)
+
+The Nanoclaw process needs bot tokens and API keys at startup. Use `op run`
+with a reference file so no secrets are written to disk:
 
 ```bash
-# .env.op (1Password reference file — no actual secrets)
+# nanoclaw.env.op (1Password references — no actual secrets)
 ANTHROPIC_API_KEY=op://Nanoclaw/Anthropic/credential
 DISCORD_BOT_TOKEN=op://Nanoclaw/discord/credential
 TELEGRAM_BOT_TOKEN=op://Nanoclaw/Telegram Bot/credential
-
-# Start Nanoclaw with secrets injected (nothing written to disk)
-op run --env-file=.env.op -- node src/index.ts
 ```
 
 **For systemd (WSL2):**
 
 ```ini
 [Service]
-ExecStart=/usr/bin/op run --env-file=/home/nanoclaw/.env.op -- node src/index.ts
-Environment=OP_SERVICE_ACCOUNT_TOKEN=<token>
+ExecStart=/usr/bin/op run --env-file=/home/nanoclaw/nanoclaw.env.op -- node src/index.ts
+Environment=OP_SERVICE_ACCOUNT_TOKEN=<runtime-token>
 ```
 
 **For Docker:**
@@ -424,12 +466,66 @@ Environment=OP_SERVICE_ACCOUNT_TOKEN=<token>
 services:
   nanoclaw:
     environment:
-      - OP_SERVICE_ACCOUNT_TOKEN
-    entrypoint: ["op", "run", "--env-file=.env.op", "--", "node", "src/index.ts"]
+      - OP_SERVICE_ACCOUNT_TOKEN  # runtime token — Nanoclaw vault only
+    entrypoint: ["op", "run", "--env-file=nanoclaw.env.op", "--", "node", "src/index.ts"]
 ```
 
-This is **simpler** than the current two-step `op inject` approach and avoids
-writing secrets to disk entirely.
+The runtime SA token is scoped to the **Nanoclaw vault only** — it cannot
+access Claude Code credentials or AWS Admin keys.
+
+### 6.2 Claude Code Development (Nanoclaw Admin vault)
+
+Claude Code needs its own Anthropic API key (for the AI that modifies the
+fork) and possibly a GitHub PAT. These come from the Admin vault, using
+a separate SA token:
+
+```bash
+# claude-code.env.op (Admin vault references)
+ANTHROPIC_API_KEY=op://Nanoclaw Admin/Claude Code/credential
+GITHUB_TOKEN=op://Nanoclaw Admin/github-cli/credential
+```
+
+The Admin SA token has access to the Admin vault (and optionally the runtime
+vault for read-only operations like viewing config). Claude Code never sees
+production bot tokens.
+
+### 6.3 Claude Code Environment Options
+
+Where Claude Code runs relative to Nanoclaw affects secret scoping and
+isolation:
+
+| Option | How it works | Isolation | Complexity |
+|--------|-------------|-----------|------------|
+| **Same WSL2 instance** | Claude Code runs alongside Nanoclaw in the same distro. Different `op run` env files scope secrets. | Low — process-level only. Both share filesystem. | Simplest |
+| **Separate WSL2 distro** | Dedicated WSL2 distro for development. Claude Code pushes changes to Nanoclaw's distro via git. | Medium — filesystem isolation, separate token. | Moderate |
+| **DevContainer** | Claude Code runs inside a VS Code DevContainer with its own secrets. Changes pushed via git or volume mount. | High — container boundary, scoped secrets, reproducible env. | Higher setup, but familiar pattern |
+
+**Trade-offs:**
+
+- **Same WSL2**: Simplest operationally. The Nanoclaw fork lives in one
+  place. Risk: if Claude Code has filesystem access, it could read
+  Nanoclaw's runtime `.env.op` references (though not the resolved
+  secrets, since `op run` never writes them to disk). The two SA tokens
+  provide the real isolation — even with filesystem access, Claude Code's
+  token cannot resolve runtime vault references.
+
+- **Separate WSL2**: Natural boundary. Claude Code works on a clone of
+  the fork, pushes changes. Nanoclaw's distro pulls and restarts. More
+  git workflow overhead but cleaner separation. Mirrors the current
+  control-node → target-VM pattern in a lighter form.
+
+- **DevContainer**: Strongest isolation. The DevContainer provides a
+  reproducible development environment with only the Admin vault token.
+  This is conceptually similar to the current DevContainer setup but for
+  Nanoclaw fork development rather than Ansible playbook testing. The
+  current `.devcontainer/` infrastructure could be **repurposed** (not
+  obsolete after all) — rewritten for a Nanoclaw development context
+  instead of an Ansible control node.
+
+**Recommendation**: Start with **same WSL2 instance** (simplest). The
+two-token vault model provides adequate secret scoping even without
+filesystem isolation. If the threat model demands stronger separation,
+the DevContainer option reuses a familiar pattern from this repo.
 
 ## 7. What Replaces Ansible?
 
@@ -463,12 +559,15 @@ the application and the deployment model.
 
 ```
 nanoclaw-setup/
-├── setup.sh                 # WSL2 provisioning (Docker, Node.js, op CLI)
-├── .env.op                  # 1Password secret references
+├── setup.sh                  # WSL2 provisioning (Docker, Node.js, op CLI)
+├── nanoclaw.env.op           # 1Password runtime secret references
+├── claude-code.env.op        # 1Password admin secret references (Claude Code)
 ├── nanoclaw.service          # systemd user unit with op run wrapper
 ├── backup.sh                 # S3 encrypted backup script
 ├── restore.sh                # S3 restore script
 ├── Justfile                  # start, stop, logs, backup, restore, update
+├── .devcontainer/            # Optional: isolated Claude Code dev environment
+│   └── devcontainer.json     # DevContainer with Admin vault token only
 ├── terraform/
 │   ├── discord/              # Discord channel provisioning (reused)
 │   └── aws/                  # S3 backup bucket (reused)
@@ -476,7 +575,7 @@ nanoclaw-setup/
 └── docs/
 ```
 
-This is roughly **10 files** replacing the current repository's **60+**.
+This is roughly **12–15 files** replacing the current repository's **60+**.
 
 The Terraform modules (`discord/`, `aws/`) could be carried forward directly.
 Everything else would be rewritten from scratch — not refactored.
@@ -496,14 +595,14 @@ Everything else would be rewritten from scratch — not refactored.
 | 9 | Backup/restore playbooks | NEEDS RETHINKING | Different data, same need; deliver as shell scripts |
 | 10 | `terraform/aws` | PARTIALLY OBSOLETE | S3 infra valid; 1Password wiring may simplify |
 | 11 | `terraform/discord` | STILL RELEVANT | Discord stays; channel provisioning unchanged |
-| 12 | 1Password two-token model | NEEDS RETHINKING | Simplify to single token + `op run` |
+| 12 | 1Password two-vault/token model | NEEDS RETHINKING | Two vaults survive (runtime + admin) with different boundaries; orchestrator vs Claude Code vs Terraform |
 | 13 | Justfile | NEEDS RETHINKING | Concept valuable; every recipe changes |
 | 14 | CI pipeline | PARTIALLY OBSOLETE | Lint survives; Molecule/ansible-lint steps obsolete |
-| 15 | DevContainer / Molecule | OBSOLETE | Tests Ansible-over-SSH; no equivalent need |
+| 15 | DevContainer / Molecule | NEEDS RETHINKING | Molecule obsolete; DevContainer concept may be repurposed for Claude Code isolation (see 6.3) |
 | 16 | Pre-commit hooks | PARTIALLY OBSOLETE | General checks survive; Ansible-specific hooks obsolete |
 | 17 | Upstream submodules | OBSOLETE | Both submodules serve obsolete purposes |
 | 18 | UFW firewall | OBSOLETE | No inbound ports; WSL2/Docker handle isolation |
 | 19 | Tailscale | NEEDS RETHINKING | Not Nanoclaw-specific; may still serve Win11 host management |
 | 20 | Nginx reverse proxy | OBSOLETE | No gateway to proxy |
 
-**Totals: 8 OBSOLETE, 2 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 7 NEEDS RETHINKING (2 unaffected)**
+**Totals: 7 OBSOLETE, 2 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 8 NEEDS RETHINKING**
