@@ -28,7 +28,7 @@ currently runs inside a **Hyper-V Ubuntu VM** for isolation.
 
 ## 2. Executive Summary
 
-**7 OBSOLETE, 2 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 8 NEEDS RETHINKING.**
+**7 OBSOLETE, 3 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 9 NEEDS RETHINKING.**
 
 The Hyper-V VM was a justified security control for OpenClaw but is
 over-engineering for Nanoclaw. Nanoclaw eliminates OpenClaw's largest attack
@@ -289,7 +289,7 @@ this indirection simplifies — both tokens are stored locally on the Win11
 host, and each context uses its own token via `op run`.
 
 - **Ansible Vault eliminated** — no encrypted group vars to manage
-- **`op run`** replaces `op inject` — no secrets written to disk at all
+- **`op run`** replaces `op inject` — resolved runtime secrets are never written to disk (the 1Password service-account token itself still requires its own secure storage, e.g. env var or system credentials)
 
 **Vault item migration:**
 
@@ -462,12 +462,19 @@ DISCORD_BOT_TOKEN=op://Nanoclaw/discord/credential
 TELEGRAM_BOT_TOKEN=op://Nanoclaw/Telegram Bot/credential
 ```
 
-**For systemd (WSL2):**
+**For systemd (WSL2) — system unit running as a dedicated `nanoclaw` user:**
 
 ```ini
 [Service]
+User=nanoclaw
 ExecStart=/usr/bin/op run --env-file=/home/nanoclaw/nanoclaw.env.op -- node src/index.ts
-Environment=OP_SERVICE_ACCOUNT_TOKEN=<runtime-token>
+EnvironmentFile=/etc/nanoclaw/op-token.env
+```
+
+Store the token in `/etc/nanoclaw/op-token.env` (owned `root:root`, mode `0600`; systemd reads it as root before dropping privileges to `User=nanoclaw`):
+
+```ini
+OP_SERVICE_ACCOUNT_TOKEN=<runtime-token>
 ```
 
 **For Docker:**
@@ -738,4 +745,4 @@ inbound ports and mandatory agent containerization) is at least as safe.
 | 19 | Tailscale | NEEDS RETHINKING | Not Nanoclaw-specific; may still serve Win11 host management |
 | 20 | Nginx reverse proxy | OBSOLETE | No gateway to proxy |
 
-**Totals: 7 OBSOLETE, 2 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 8 NEEDS RETHINKING**
+**Totals: 7 OBSOLETE, 3 PARTIALLY OBSOLETE, 1 STILL RELEVANT, 9 NEEDS RETHINKING**
