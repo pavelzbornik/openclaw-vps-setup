@@ -31,3 +31,4 @@ cover everything from first-time setup through day-to-day operations.
 | [Backup and restore](backup-restore.md) | How the daily S3 backup cron works, how to trigger a manual backup, and how to restore from a snapshot |
 | [Discord Terraform](discord-terraform.md) | Why Discord is used as OpenClaw's interface channel and how Terraform manages the server layout |
 | [Pre-commit setup](PRE_COMMIT_SETUP.md) | Installing and configuring the pre-commit hooks enforced by this repository |
+| [Nanoclaw infrastructure analysis](nanoclaw-infrastructure-analysis.md) | Component-by-component fitness analysis for migrating from OpenClaw (Hyper-V VM + Ansible) to Nanoclaw (WSL2/Docker), including isolation options and migration guidance |
