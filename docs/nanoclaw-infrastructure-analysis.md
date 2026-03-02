@@ -462,15 +462,16 @@ DISCORD_BOT_TOKEN=op://Nanoclaw/discord/credential
 TELEGRAM_BOT_TOKEN=op://Nanoclaw/Telegram Bot/credential
 ```
 
-**For systemd (WSL2):**
+**For systemd (WSL2) — system unit running as a dedicated `nanoclaw` user:**
 
 ```ini
 [Service]
+User=nanoclaw
 ExecStart=/usr/bin/op run --env-file=/home/nanoclaw/nanoclaw.env.op -- node src/index.ts
 EnvironmentFile=/etc/nanoclaw/op-token.env
 ```
 
-Store the token in `/etc/nanoclaw/op-token.env` (owned `root:nanoclaw`, mode `0640`):
+Store the token in `/etc/nanoclaw/op-token.env` (owned `root:root`, mode `0600`; systemd reads it as root before dropping privileges to `User=nanoclaw`):
 
 ```ini
 OP_SERVICE_ACCOUNT_TOKEN=<runtime-token>
