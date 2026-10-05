@@ -1,3 +1,7 @@
+> [!WARNING]
+> **No longer maintained (archived 2026-10).** Last release: [v0.2.1](https://github.com/pavelzbornik/openclaw-vps-setup/releases/tag/v0.2.1) (2026-03-02).
+> The playbooks are kept read-only for reference. They target OpenClaw as of early 2026 and may not work with newer versions — fork the repo if you need changes.
+
 # OpenClaw VPS setup
 
 Automated provisioning and deployment for the OpenClaw AI agent on Ubuntu VPS or Hyper-V VMs.
